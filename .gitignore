@@ -1,0 +1,7 @@
+build/
+*.tmp
+.promptkit/lock
+journeys
+.agents
+.claude
+.promptkit

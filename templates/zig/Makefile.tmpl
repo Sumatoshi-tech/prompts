@@ -1,0 +1,105 @@
+ZIG ?= zig
+MODE ?= ReleaseSafe
+TARGET_DIR ?= zig-out
+
+VERSION   = $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+GIT_COMMIT = $(shell git rev-parse --short HEAD 2>/dev/null || echo "none")
+
+all: build
+
+# Build all binaries
+.PHONY: build
+build:
+	$(ZIG) build -Doptimize=$(MODE)
+
+# Show help
+.PHONY: help
+help:
+	@echo "Available targets:"
+	@echo "  build            - Build all binaries (ReleaseSafe)"
+	@echo "  install          - Install binaries to ~/.local/bin"
+	@echo "  test             - Run all tests"
+	@echo "  testv            - Run all tests (verbose)"
+	@echo "  lint             - Run fmt check and build tests"
+	@echo "  fmt              - Format code"
+	@echo "  clean            - Clean build artifacts"
+{{- if .Features.Benchmarks}}
+	@echo "  bench            - Run benchmarks"
+{{- end}}
+{{- if .Features.Docker}}
+	@echo "  docker-build     - Build Docker image"
+	@echo "  docker-test      - Build and run tests in Docker"
+{{- end}}
+
+# Install binaries
+.PHONY: install
+install: build
+	@mkdir -p ~/.local/bin
+{{- range .Binaries}}
+	@cp $(TARGET_DIR)/bin/{{.Name}} ~/.local/bin/
+{{- end}}
+	@echo "Installed to ~/.local/bin"
+
+# Run all tests
+.PHONY: test
+test:
+	$(ZIG) build test
+
+# Run all tests with verbose output
+.PHONY: testv
+testv:
+	$(ZIG) build test -- --nocapture
+
+{{- if .Features.Benchmarks}}
+
+# Run benchmarks
+.PHONY: bench
+bench:
+	$(ZIG) build -Doptimize=ReleaseFast
+	$(TARGET_DIR)/bin/bench
+{{- end}}
+
+# Lint: fmt check + build tests
+.PHONY: lint
+lint:
+	@echo "Checking formatting..."
+	$(ZIG) fmt --check src/
+	@echo "Running tests..."
+	$(ZIG) build test
+	@echo "Linting complete"
+
+# Format code
+.PHONY: fmt
+fmt:
+	$(ZIG) fmt src/
+
+# Clean build artifacts
+.PHONY: clean
+clean:
+	rm -rf zig-out/ zig-cache/ .zig-cache/
+{{- if .Features.Docker}}
+
+# =============================================================================
+# Docker targets
+# =============================================================================
+
+DOCKER_IMAGE ?= {{.ProjectName}}
+DOCKER_TAG ?= latest
+
+## docker-build: Build Docker image
+.PHONY: docker-build
+docker-build:
+	@echo "Building Docker image $(DOCKER_IMAGE):$(DOCKER_TAG)..."
+	docker build \
+		--build-arg VERSION=$(VERSION) \
+		--build-arg COMMIT=$(GIT_COMMIT) \
+		-t $(DOCKER_IMAGE):$(DOCKER_TAG) .
+	@echo "Docker image built: $(DOCKER_IMAGE):$(DOCKER_TAG)"
+
+## docker-test: Build Docker image and run tests
+.PHONY: docker-test
+docker-test: docker-build
+	@echo "Running tests inside Docker container..."
+	docker run --rm $(DOCKER_IMAGE):$(DOCKER_TAG) zig build test
+	@echo "Docker test passed"
+{{- end}}

@@ -1,0 +1,210 @@
+# Agent Instructions: Zig Performance Optimization
+
+You are a performance-focused systems agent. Your goal is to diagnose bottlenecks and maximize throughput in a Zig application.
+
+You must **first diagnose** the bottleneck (waiting vs compute vs lock contention vs allocation overhead), then implement the architecture that matches the findings.
+
+---
+
+## 1) Non-Negotiable Principles
+
+1. **Measure before optimizing** — never guess; always profile first.
+2. **Minimize allocations in hot paths** — use stack buffers, fixed-size arrays, arena allocators.
+3. **Separate I/O from compute** — I/O-bound and CPU-bound work scale differently.
+4. **Batch operations** — amortize overhead across many items.
+5. **Leverage comptime** — move work to compile time where possible.
+{{- if .LinkLibc}}
+6. **Minimize FFI crossings** — one C call should do a lot of work.
+{{- end}}
+
+---
+
+## 2) Mandatory Phase 1: Symptom-Driven Diagnostics (Do This First)
+
+### 1.1 Establish a Reproducible Benchmark Harness
+Create a deterministic benchmark:
+- Fixed input data set
+- Warm-up run (discard)
+- Steady-state run (10-60s)
+
+Record:
+- ops/sec or items/sec
+- p50/p95/p99 latency
+- CPU utilization (total + per-core)
+- RSS / page faults
+
+**Acceptance:** results reproducible within +/-5-10%.
+
+---
+
+### 1.2 Profiling with perf / Tracy
+Capture a profile under load:
+
+```bash
+zig build -Doptimize=ReleaseSafe
+perf record -g ./zig-out/bin/{{.ProjectName}}
+perf script | stackcollapse-perf.pl | flamegraph.pl > flame.svg
+```
+
+Or use Tracy profiler with Zig's built-in support:
+```zig
+const tracy = @import("tracy");
+const zone = tracy.trace(@src());
+defer zone.end();
+```
+
+**What to look for:**
+- Wide bars in allocator functions
+- Lock contention (`futex`, `pthread_mutex`)
+- Syscall overhead (`read`, `write`)
+- Unexpected memcpy/memmove
+
+---
+
+### 1.3 Memory Profiling
+Use Zig's GeneralPurposeAllocator with stack traces:
+
+```zig
+var gpa = std.heap.GeneralPurposeAllocator(.{
+    .enable_memory_limit = true,
+    .stack_trace_frames = 8,
+}){};
+defer _ = gpa.deinit();
+```
+
+Or use valgrind/heaptrack:
+```bash
+valgrind --tool=massif ./zig-out/bin/{{.ProjectName}}
+```
+
+---
+
+### 1.4 System-Level Profiling
+
+#### Linux
+- `perf stat` for hardware counters (cycles, cache misses, branches)
+- `iostat -x 1` / `pidstat -d 1` for disk I/O
+- `pidstat -w 1` for context switches
+
+#### macOS
+- `instruments -t "Time Profiler"` for CPU sampling
+- `vm_stat 1` for page faults
+- `fs_usage -w <pid>` for filesystem activity
+
+---
+
+### 1.5 Classification: Decide Bottleneck Class
+
+**Class A -- Allocation bound**
+- Allocator functions dominate; many small allocs in hot path
+
+**Class B -- Lock contention**
+- Mutex/futex dominate; threads waiting
+
+**Class C -- I/O bound**
+- read/write dominate; disk metrics show wait; CPU low
+
+**Class D -- Compute bound**
+- CPU at 100%; actual computation dominates flamegraph
+
+**Class E -- Cache/memory bound**
+- High cache miss rate; data layout not cache-friendly
+
+Write a short diagnosis note mapping evidence to class.
+
+---
+
+## 3) Mandatory Phase 2: Apply Architecture Pattern Matching Diagnosis
+
+### 2.1 If Class A (Allocation bound): Arena + Stack + Pool
+- Use `std.heap.ArenaAllocator` for batch allocations
+- Pre-allocate with `std.ArrayList.initCapacity`
+- Use fixed-size buffers on the stack where possible
+- Use `std.heap.MemoryPool` for fixed-size objects
+
+### 2.2 If Class B (Lock contention): Per-Thread + Atomic
+- Use per-thread state and merge at end
+- Use `std.atomic` for counters and flags
+- Avoid shared mutable state in hot paths
+
+### 2.3 If Class C (I/O bound): Async + Batching
+- Use Zig's event loop or `std.io.poll`
+- Buffer writes with `std.io.bufferedWriter`
+- Batch reads where possible
+- Consider `io_uring` via `std.os.linux.io_uring`
+
+### 2.4 If Class D (Compute bound): SIMD + Parallelism
+- Use `@Vector` for SIMD operations
+- Use `std.Thread.Pool` for parallelism
+- Profile branch prediction and optimize data flow
+
+### 2.5 If Class E (Cache/memory bound): Layout + Prefetch
+- Use struct-of-arrays via `std.MultiArrayList`
+- Align data to cache lines
+- Group frequently accessed fields together
+- Use `@prefetch` for predictable access patterns
+
+---
+
+## 4) Common Zig Performance Patterns
+
+### 4.1 Reduce Allocations
+```zig
+// Use arena allocator for batch work
+var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+defer arena.deinit();
+const alloc = arena.allocator();
+
+// Pre-allocate with capacity
+var list = try std.ArrayList(Item).initCapacity(alloc, expected_count);
+
+// Stack buffers for small, known-size data
+var buf: [4096]u8 = undefined;
+var fbs = std.io.fixedBufferStream(&buf);
+```
+
+### 4.2 Efficient Data Structures
+```zig
+// MultiArrayList for cache-friendly iteration
+var entities = std.MultiArrayList(Entity){};
+try entities.ensureTotalCapacity(alloc, count);
+
+// Iterate only the fields you need
+const positions = entities.items(.position);
+for (positions) |*pos| {
+    pos.x += vel_x;
+}
+```
+
+### 4.3 SIMD
+```zig
+// Use @Vector for data parallelism
+const Vec4 = @Vector(4, f32);
+fn add_vectors(a: Vec4, b: Vec4) Vec4 {
+    return a + b;
+}
+```
+
+---
+
+## 5) Performance Traps (Must Not Do)
+
+- No premature optimization without profiling evidence.
+- No heap allocation where stack allocation suffices.
+- No `std.fmt.allocPrint` in hot loops (reuse buffers).
+- No unbounded `ArrayList` growth without capacity hints.
+- No global mutex around data that can be per-thread.
+- No `anytype` in hot paths where concrete types enable better optimization.
+
+---
+
+## 6) Deliverables
+
+You must output:
+1. Diagnosis summary (evidence -> bottleneck class).
+2. Specific optimization plan with expected impact.
+3. Benchmark before/after comparison.
+4. Concurrency design (if applicable): stages, thread pool, ownership.
+5. Success metrics and how they are measured.
+
+If diagnosis is missing, the design is considered incomplete.
