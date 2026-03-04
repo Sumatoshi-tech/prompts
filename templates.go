@@ -1,3 +1,4 @@
+// Package promptkit provides the promptkit scaffold CLI and embedded templates.
 package promptkit
 
 import "embed"

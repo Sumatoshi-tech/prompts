@@ -1,17 +1,21 @@
 package scaffold_test
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"testing/fstest"
 
+	promptkit "github.com/Sumatoshi-tech/promptkit"
 	"github.com/Sumatoshi-tech/promptkit/internal/config"
 	"github.com/Sumatoshi-tech/promptkit/internal/scaffold"
 )
 
 func TestRender_SimpleTemplate(t *testing.T) {
+	t.Parallel()
+
 	tmplFS := fstest.MapFS{
 		"templates/golang/README.md.tmpl": &fstest.MapFile{
 			Data: []byte("# {{.ProjectName}}\n\n{{.Description}}\n"),
@@ -19,8 +23,8 @@ func TestRender_SimpleTemplate(t *testing.T) {
 	}
 
 	cfg := testConfig()
-	result, err := scaffold.Render(cfg, tmplFS)
 
+	result, err := scaffold.Render(cfg, tmplFS)
 	if err != nil {
 		t.Fatalf("Render() error: %v", err)
 	}
@@ -41,6 +45,8 @@ func TestRender_SimpleTemplate(t *testing.T) {
 }
 
 func TestRender_NonTemplateFile(t *testing.T) {
+	t.Parallel()
+
 	tmplFS := fstest.MapFS{
 		"templates/golang/static.txt": &fstest.MapFile{
 			Data: []byte("no templates here"),
@@ -48,8 +54,8 @@ func TestRender_NonTemplateFile(t *testing.T) {
 	}
 
 	cfg := testConfig()
-	result, err := scaffold.Render(cfg, tmplFS)
 
+	result, err := scaffold.Render(cfg, tmplFS)
 	if err != nil {
 		t.Fatalf("Render() error: %v", err)
 	}
@@ -65,6 +71,8 @@ func TestRender_NonTemplateFile(t *testing.T) {
 }
 
 func TestRender_NestedPaths(t *testing.T) {
+	t.Parallel()
+
 	tmplFS := fstest.MapFS{
 		"templates/golang/instructions/instr-frd.md.tmpl": &fstest.MapFile{
 			Data: []byte("# FRD Template"),
@@ -72,8 +80,8 @@ func TestRender_NestedPaths(t *testing.T) {
 	}
 
 	cfg := testConfig()
-	result, err := scaffold.Render(cfg, tmplFS)
 
+	result, err := scaffold.Render(cfg, tmplFS)
 	if err != nil {
 		t.Fatalf("Render() error: %v", err)
 	}
@@ -84,6 +92,8 @@ func TestRender_NestedPaths(t *testing.T) {
 }
 
 func TestRender_ConditionalCGO(t *testing.T) {
+	t.Parallel()
+
 	tmplFS := fstest.MapFS{
 		"templates/golang/test.txt.tmpl": &fstest.MapFile{
 			Data: []byte("base{{if .Features.CGO}}\ncgo enabled{{end}}\n"),
@@ -91,6 +101,8 @@ func TestRender_ConditionalCGO(t *testing.T) {
 	}
 
 	t.Run("cgo disabled", func(t *testing.T) {
+		t.Parallel()
+
 		cfg := testConfig()
 		cfg.Features.CGO = false
 
@@ -106,6 +118,8 @@ func TestRender_ConditionalCGO(t *testing.T) {
 	})
 
 	t.Run("cgo enabled", func(t *testing.T) {
+		t.Parallel()
+
 		cfg := testConfig()
 		cfg.Features.CGO = true
 
@@ -122,6 +136,8 @@ func TestRender_ConditionalCGO(t *testing.T) {
 }
 
 func TestRender_BinaryIteration(t *testing.T) {
+	t.Parallel()
+
 	tmplFS := fstest.MapFS{
 		"templates/golang/bins.txt.tmpl": &fstest.MapFile{
 			Data: []byte("{{range .Binaries}}{{.Name}} {{end}}"),
@@ -146,11 +162,13 @@ func TestRender_BinaryIteration(t *testing.T) {
 }
 
 func TestApply_ModeCreate(t *testing.T) {
+	t.Parallel()
+
 	dir := t.TempDir()
 
 	// Pre-create a file that should NOT be overwritten.
 	existingPath := filepath.Join(dir, "existing.txt")
-	if err := os.WriteFile(existingPath, []byte("original"), 0o644); err != nil {
+	if err := os.WriteFile(existingPath, []byte("original"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -171,8 +189,8 @@ func TestApply_ModeCreate(t *testing.T) {
 
 	// new.txt should be created.
 	newPath := filepath.Join(dir, "new.txt")
-	got, err := os.ReadFile(newPath)
 
+	got, err := os.ReadFile(newPath)
 	if err != nil {
 		t.Fatalf("new file not created: %v", err)
 	}
@@ -183,10 +201,12 @@ func TestApply_ModeCreate(t *testing.T) {
 }
 
 func TestApply_ModeForce(t *testing.T) {
+	t.Parallel()
+
 	dir := t.TempDir()
 
 	existingPath := filepath.Join(dir, "existing.txt")
-	if err := os.WriteFile(existingPath, []byte("original"), 0o644); err != nil {
+	if err := os.WriteFile(existingPath, []byte("original"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -205,6 +225,8 @@ func TestApply_ModeForce(t *testing.T) {
 }
 
 func TestApply_CreatesSubdirectories(t *testing.T) {
+	t.Parallel()
+
 	dir := t.TempDir()
 
 	rendered := map[string][]byte{
@@ -215,7 +237,7 @@ func TestApply_CreatesSubdirectories(t *testing.T) {
 		t.Fatalf("Apply() error: %v", err)
 	}
 
-	got, err := os.ReadFile(filepath.Join(dir, "a/b/c/deep.txt"))
+	got, err := os.ReadFile(filepath.Join(dir, "a", "b", "c", "deep.txt"))
 	if err != nil {
 		t.Fatalf("deep file not created: %v", err)
 	}
@@ -226,6 +248,8 @@ func TestApply_CreatesSubdirectories(t *testing.T) {
 }
 
 func TestApply_ShellScriptPermissions(t *testing.T) {
+	t.Parallel()
+
 	dir := t.TempDir()
 
 	rendered := map[string][]byte{
@@ -236,7 +260,7 @@ func TestApply_ShellScriptPermissions(t *testing.T) {
 		t.Fatalf("Apply() error: %v", err)
 	}
 
-	info, err := os.Stat(filepath.Join(dir, "scripts/run.sh"))
+	info, err := os.Stat(filepath.Join(dir, "scripts", "run.sh"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -248,6 +272,8 @@ func TestApply_ShellScriptPermissions(t *testing.T) {
 }
 
 func TestDiff_NewFile(t *testing.T) {
+	t.Parallel()
+
 	dir := t.TempDir()
 
 	rendered := map[string][]byte{
@@ -269,9 +295,11 @@ func TestDiff_NewFile(t *testing.T) {
 }
 
 func TestDiff_ModifiedFile(t *testing.T) {
+	t.Parallel()
+
 	dir := t.TempDir()
 
-	if err := os.WriteFile(filepath.Join(dir, "file.txt"), []byte("old"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "file.txt"), []byte("old"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -298,10 +326,12 @@ func TestDiff_ModifiedFile(t *testing.T) {
 }
 
 func TestDiff_IdenticalFile(t *testing.T) {
+	t.Parallel()
+
 	dir := t.TempDir()
 	content := []byte("same content")
 
-	if err := os.WriteFile(filepath.Join(dir, "file.txt"), content, 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "file.txt"), content, 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -320,6 +350,8 @@ func TestDiff_IdenticalFile(t *testing.T) {
 }
 
 func TestRenderWithOverrides(t *testing.T) {
+	t.Parallel()
+
 	tmplFS := fstest.MapFS{
 		"templates/golang/base.txt.tmpl": &fstest.MapFile{
 			Data: []byte("base: {{.ProjectName}}"),
@@ -329,7 +361,7 @@ func TestRenderWithOverrides(t *testing.T) {
 	overrideDir := t.TempDir()
 	overridePath := filepath.Join(overrideDir, "base.txt.tmpl")
 
-	if err := os.WriteFile(overridePath, []byte("override: {{.ProjectName}}"), 0o644); err != nil {
+	if err := os.WriteFile(overridePath, []byte("override: {{.ProjectName}}"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -347,6 +379,8 @@ func TestRenderWithOverrides(t *testing.T) {
 }
 
 func TestUnifiedDiff_NoDifference(t *testing.T) {
+	t.Parallel()
+
 	old := []byte("line1\nline2\nline3\n")
 	result := scaffold.UnifiedDiff(old, old, "test.txt")
 
@@ -356,10 +390,12 @@ func TestUnifiedDiff_NoDifference(t *testing.T) {
 }
 
 func TestUnifiedDiff_AddedLines(t *testing.T) {
-	old := []byte("line1\nline3\n")
-	new := []byte("line1\nline2\nline3\n")
+	t.Parallel()
 
-	result := scaffold.UnifiedDiff(old, new, "test.txt")
+	old := []byte("line1\nline3\n")
+	updated := []byte("line1\nline2\nline3\n")
+
+	result := scaffold.UnifiedDiff(old, updated, "test.txt")
 	if result == "" {
 		t.Fatal("expected non-empty diff")
 	}
@@ -382,10 +418,12 @@ func TestUnifiedDiff_AddedLines(t *testing.T) {
 }
 
 func TestUnifiedDiff_RemovedLines(t *testing.T) {
-	old := []byte("line1\nline2\nline3\n")
-	new := []byte("line1\nline3\n")
+	t.Parallel()
 
-	result := scaffold.UnifiedDiff(old, new, "test.txt")
+	old := []byte("line1\nline2\nline3\n")
+	updated := []byte("line1\nline3\n")
+
+	result := scaffold.UnifiedDiff(old, updated, "test.txt")
 	if result == "" {
 		t.Fatal("expected non-empty diff")
 	}
@@ -396,10 +434,12 @@ func TestUnifiedDiff_RemovedLines(t *testing.T) {
 }
 
 func TestUnifiedDiff_ModifiedLines(t *testing.T) {
-	old := []byte("hello world\n")
-	new := []byte("hello universe\n")
+	t.Parallel()
 
-	result := scaffold.UnifiedDiff(old, new, "greeting.txt")
+	old := []byte("hello world\n")
+	updated := []byte("hello universe\n")
+
+	result := scaffold.UnifiedDiff(old, updated, "greeting.txt")
 	if result == "" {
 		t.Fatal("expected non-empty diff")
 	}
@@ -414,9 +454,11 @@ func TestUnifiedDiff_ModifiedLines(t *testing.T) {
 }
 
 func TestUnifiedDiff_EmptyOld(t *testing.T) {
-	new := []byte("line1\nline2\n")
+	t.Parallel()
 
-	result := scaffold.UnifiedDiff(nil, new, "new.txt")
+	updated := []byte("line1\nline2\n")
+
+	result := scaffold.UnifiedDiff(nil, updated, "new.txt")
 	if result == "" {
 		t.Fatal("expected non-empty diff for new file")
 	}
@@ -427,6 +469,8 @@ func TestUnifiedDiff_EmptyOld(t *testing.T) {
 }
 
 func TestDetectStale_NoStale(t *testing.T) {
+	t.Parallel()
+
 	rendered := map[string][]byte{
 		"a.txt": []byte("a"),
 		"b.txt": []byte("b"),
@@ -440,6 +484,8 @@ func TestDetectStale_NoStale(t *testing.T) {
 }
 
 func TestDetectStale_HasStale(t *testing.T) {
+	t.Parallel()
+
 	rendered := map[string][]byte{
 		"a.txt": []byte("a"),
 	}
@@ -457,6 +503,8 @@ func TestDetectStale_HasStale(t *testing.T) {
 }
 
 func TestDetectStale_EmptyManifest(t *testing.T) {
+	t.Parallel()
+
 	rendered := map[string][]byte{
 		"a.txt": []byte("a"),
 	}
@@ -468,11 +516,13 @@ func TestDetectStale_EmptyManifest(t *testing.T) {
 }
 
 func TestRemoveFiles(t *testing.T) {
+	t.Parallel()
+
 	dir := t.TempDir()
 
 	// Create files to remove.
 	for _, name := range []string{"a.txt", "b.txt"} {
-		if err := os.WriteFile(filepath.Join(dir, name), []byte("content"), 0o644); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte("content"), 0o600); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -493,6 +543,8 @@ func TestRemoveFiles(t *testing.T) {
 }
 
 func TestFileManifest(t *testing.T) {
+	t.Parallel()
+
 	rendered := map[string][]byte{
 		"c.txt": []byte("c"),
 		"a.txt": []byte("a"),
@@ -511,6 +563,8 @@ func TestFileManifest(t *testing.T) {
 }
 
 func TestComputeChecksums(t *testing.T) {
+	t.Parallel()
+
 	rendered := map[string][]byte{
 		"a.txt": []byte("hello"),
 		"b.txt": []byte("world"),
@@ -545,6 +599,8 @@ func TestComputeChecksums(t *testing.T) {
 }
 
 func TestRenderWithOverrides_ErrorIdentifiesFile(t *testing.T) {
+	t.Parallel()
+
 	tmplFS := fstest.MapFS{
 		"templates/golang/base.txt.tmpl": &fstest.MapFile{
 			Data: []byte("base: {{.ProjectName}}"),
@@ -555,7 +611,7 @@ func TestRenderWithOverrides_ErrorIdentifiesFile(t *testing.T) {
 	overridePath := filepath.Join(overrideDir, "broken.txt.tmpl")
 
 	// Write a template with invalid syntax.
-	if err := os.WriteFile(overridePath, []byte("{{.Invalid.{{Bad}}"), 0o644); err != nil {
+	if err := os.WriteFile(overridePath, []byte("{{.Invalid.{{Bad}}"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -573,6 +629,8 @@ func TestRenderWithOverrides_ErrorIdentifiesFile(t *testing.T) {
 }
 
 func TestRenderSingle_Embedded(t *testing.T) {
+	t.Parallel()
+
 	tmplFS := fstest.MapFS{
 		"templates/golang/README.md.tmpl": &fstest.MapFile{
 			Data: []byte("# {{.ProjectName}}"),
@@ -592,6 +650,8 @@ func TestRenderSingle_Embedded(t *testing.T) {
 }
 
 func TestRenderSingle_Override(t *testing.T) {
+	t.Parallel()
+
 	tmplFS := fstest.MapFS{
 		"templates/golang/README.md.tmpl": &fstest.MapFile{
 			Data: []byte("# Embedded {{.ProjectName}}"),
@@ -602,7 +662,7 @@ func TestRenderSingle_Override(t *testing.T) {
 	if err := os.WriteFile(
 		filepath.Join(overrideDir, "README.md.tmpl"),
 		[]byte("# Override {{.ProjectName}}"),
-		0o644,
+		0o600,
 	); err != nil {
 		t.Fatal(err)
 	}
@@ -620,6 +680,8 @@ func TestRenderSingle_Override(t *testing.T) {
 }
 
 func TestRenderSingle_NotFound(t *testing.T) {
+	t.Parallel()
+
 	tmplFS := fstest.MapFS{}
 
 	cfg := testConfig()
@@ -635,14 +697,16 @@ func TestRenderSingle_NotFound(t *testing.T) {
 }
 
 func TestBackupFiles(t *testing.T) {
+	t.Parallel()
+
 	dir := t.TempDir()
 
 	// Create files to back up.
-	if err := os.WriteFile(filepath.Join(dir, "a.txt"), []byte("content-a"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "a.txt"), []byte("content-a"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := os.WriteFile(filepath.Join(dir, "b.txt"), []byte("content-b"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "b.txt"), []byte("content-b"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -667,6 +731,8 @@ func TestBackupFiles(t *testing.T) {
 }
 
 func TestBackupFiles_NewFilesSkipped(t *testing.T) {
+	t.Parallel()
+
 	dir := t.TempDir()
 
 	// No files exist on disk — should skip gracefully.
@@ -681,20 +747,22 @@ func TestBackupFiles_NewFilesSkipped(t *testing.T) {
 }
 
 func TestRestoreBackup(t *testing.T) {
+	t.Parallel()
+
 	dir := t.TempDir()
 	backupDir := filepath.Join(dir, "backup")
 
 	// Create a backup.
-	if err := os.MkdirAll(backupDir, 0o755); err != nil {
+	if err := os.MkdirAll(backupDir, 0o750); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := os.WriteFile(filepath.Join(backupDir, "file.txt"), []byte("backed up"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(backupDir, "file.txt"), []byte("backed up"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
 	targetDir := filepath.Join(dir, "target")
-	if err := os.MkdirAll(targetDir, 0o755); err != nil {
+	if err := os.MkdirAll(targetDir, 0o750); err != nil {
 		t.Fatal(err)
 	}
 
@@ -713,6 +781,8 @@ func TestRestoreBackup(t *testing.T) {
 }
 
 func TestApply_Atomic(t *testing.T) {
+	t.Parallel()
+
 	dir := t.TempDir()
 
 	rendered := map[string][]byte{
@@ -743,6 +813,8 @@ func TestApply_Atomic(t *testing.T) {
 }
 
 func TestProvenance_MarkdownFiles(t *testing.T) {
+	t.Parallel()
+
 	rendered := map[string][]byte{
 		"AGENTS.md": []byte("# Agent\nContent"),
 	}
@@ -753,12 +825,15 @@ func TestProvenance_MarkdownFiles(t *testing.T) {
 	if !strings.Contains(s, "Generated by promptkit") {
 		t.Error("AGENTS.md: missing provenance comment")
 	}
+
 	if !strings.HasPrefix(s, "<!--") {
 		t.Errorf("AGENTS.md: markdown file should use HTML comment, got: %s", s[:min(40, len(s))])
 	}
 }
 
 func TestProvenance_SkipsFrontmatter(t *testing.T) {
+	t.Parallel()
+
 	rendered := map[string][]byte{
 		"rules/r.mdc":                  []byte("---\nalwaysApply: true\n---\nContent"),
 		".agents/skills/impl/SKILL.md": []byte("---\nname: impl\n---\nBody"),
@@ -771,6 +846,7 @@ func TestProvenance_SkipsFrontmatter(t *testing.T) {
 		if strings.Contains(s, "Generated by promptkit") {
 			t.Errorf("%s: files with YAML frontmatter should NOT have provenance", path)
 		}
+
 		if !strings.HasPrefix(s, "---\n") {
 			t.Errorf("%s: frontmatter should be preserved, got: %s", path, s[:min(20, len(s))])
 		}
@@ -778,6 +854,8 @@ func TestProvenance_SkipsFrontmatter(t *testing.T) {
 }
 
 func TestProvenance_YAMLFiles(t *testing.T) {
+	t.Parallel()
+
 	rendered := map[string][]byte{
 		".golangci.yml": []byte("version: 2"),
 		"config.yaml":   []byte("key: value"),
@@ -794,6 +872,8 @@ func TestProvenance_YAMLFiles(t *testing.T) {
 }
 
 func TestProvenance_ShellAndMakefile(t *testing.T) {
+	t.Parallel()
+
 	rendered := map[string][]byte{
 		"scripts/run.sh": []byte("#!/bin/bash\necho hello"),
 		"Makefile":       []byte("all: build"),
@@ -811,6 +891,8 @@ func TestProvenance_ShellAndMakefile(t *testing.T) {
 }
 
 func TestProvenance_PreservesOriginalContent(t *testing.T) {
+	t.Parallel()
+
 	original := []byte("# My Content\nHello world")
 	rendered := map[string][]byte{
 		"test.md": original,
@@ -825,6 +907,8 @@ func TestProvenance_PreservesOriginalContent(t *testing.T) {
 }
 
 func TestDiffRendered_Identical(t *testing.T) {
+	t.Parallel()
+
 	local := map[string][]byte{"a.txt": []byte("same")}
 	upstream := map[string][]byte{"a.txt": []byte("same")}
 
@@ -835,6 +919,8 @@ func TestDiffRendered_Identical(t *testing.T) {
 }
 
 func TestDiffRendered_Modified(t *testing.T) {
+	t.Parallel()
+
 	local := map[string][]byte{"a.txt": []byte("new")}
 	upstream := map[string][]byte{"a.txt": []byte("old")}
 
@@ -857,6 +943,8 @@ func TestDiffRendered_Modified(t *testing.T) {
 }
 
 func TestDiffRendered_OnlyInLocal(t *testing.T) {
+	t.Parallel()
+
 	local := map[string][]byte{"a.txt": []byte("new"), "b.txt": []byte("local only")}
 	upstream := map[string][]byte{"a.txt": []byte("new")}
 
@@ -875,6 +963,8 @@ func TestDiffRendered_OnlyInLocal(t *testing.T) {
 }
 
 func TestDiffRendered_OnlyInUpstream(t *testing.T) {
+	t.Parallel()
+
 	local := map[string][]byte{"a.txt": []byte("shared")}
 	upstream := map[string][]byte{"a.txt": []byte("shared"), "c.txt": []byte("upstream only")}
 
@@ -898,6 +988,8 @@ func TestDiffRendered_OnlyInUpstream(t *testing.T) {
 }
 
 func TestDiffRendered_Sorted(t *testing.T) {
+	t.Parallel()
+
 	local := map[string][]byte{
 		"c.txt": []byte("c"),
 		"a.txt": []byte("a"),
@@ -916,6 +1008,8 @@ func TestDiffRendered_Sorted(t *testing.T) {
 }
 
 func TestCheckOverrideStaleness_NoChange(t *testing.T) {
+	t.Parallel()
+
 	tmplFS := fstest.MapFS{
 		"templates/golang/test.md.tmpl": &fstest.MapFile{
 			Data: []byte("# Original content"),
@@ -924,7 +1018,7 @@ func TestCheckOverrideStaleness_NoChange(t *testing.T) {
 
 	dir := t.TempDir()
 	overrideDir := filepath.Join(dir, "templates")
-	os.MkdirAll(overrideDir, 0o755)
+	os.MkdirAll(overrideDir, 0o750)
 
 	// Save checksum matching the current embedded template.
 	scaffold.SaveOverrideChecksum(overrideDir, "test.md.tmpl", []byte("# Original content"))
@@ -936,6 +1030,8 @@ func TestCheckOverrideStaleness_NoChange(t *testing.T) {
 }
 
 func TestCheckOverrideStaleness_DetectsChange(t *testing.T) {
+	t.Parallel()
+
 	tmplFS := fstest.MapFS{
 		"templates/golang/test.md.tmpl": &fstest.MapFile{
 			Data: []byte("# Updated content"),
@@ -944,7 +1040,7 @@ func TestCheckOverrideStaleness_DetectsChange(t *testing.T) {
 
 	dir := t.TempDir()
 	overrideDir := filepath.Join(dir, "templates")
-	os.MkdirAll(overrideDir, 0o755)
+	os.MkdirAll(overrideDir, 0o750)
 
 	// Save checksum for old version of the embedded template.
 	scaffold.SaveOverrideChecksum(overrideDir, "test.md.tmpl", []byte("# Old content"))
@@ -960,7 +1056,10 @@ func TestCheckOverrideStaleness_DetectsChange(t *testing.T) {
 }
 
 func TestCheckOverrideStaleness_EmptyDir(t *testing.T) {
+	t.Parallel()
+
 	tmplFS := fstest.MapFS{}
+
 	stale := scaffold.CheckOverrideStaleness(tmplFS, "", "golang")
 	if len(stale) != 0 {
 		t.Errorf("expected no stale overrides for empty dir, got %v", stale)
@@ -968,6 +1067,8 @@ func TestCheckOverrideStaleness_EmptyDir(t *testing.T) {
 }
 
 func TestTemplateDirForEcosystem(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		ecosystem string
 		want      string
@@ -979,6 +1080,8 @@ func TestTemplateDirForEcosystem(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.ecosystem, func(t *testing.T) {
+			t.Parallel()
+
 			got := scaffold.TemplateDirForEcosystem(tt.ecosystem)
 			if got != tt.want {
 				t.Errorf("TemplateDirForEcosystem(%q) = %q, want %q", tt.ecosystem, got, tt.want)
@@ -988,6 +1091,8 @@ func TestTemplateDirForEcosystem(t *testing.T) {
 }
 
 func TestRender_RustEcosystem(t *testing.T) {
+	t.Parallel()
+
 	tmplFS := fstest.MapFS{
 		"templates/rust/Cargo.toml.tmpl": &fstest.MapFile{
 			Data: []byte("[package]\nname = \"{{.ProjectName}}\"\n"),
@@ -1013,6 +1118,8 @@ func TestRender_RustEcosystem(t *testing.T) {
 }
 
 func TestRender_ZigEcosystem(t *testing.T) {
+	t.Parallel()
+
 	tmplFS := fstest.MapFS{
 		"templates/zig/build.zig.tmpl": &fstest.MapFile{
 			Data: []byte("// {{.ProjectName}} build\n"),
@@ -1038,6 +1145,8 @@ func TestRender_ZigEcosystem(t *testing.T) {
 }
 
 func TestRenderSingle_RustEcosystem(t *testing.T) {
+	t.Parallel()
+
 	tmplFS := fstest.MapFS{
 		"templates/rust/Cargo.toml.tmpl": &fstest.MapFile{
 			Data: []byte("[package]\nname = \"{{.ProjectName}}\"\n"),
@@ -1068,4 +1177,429 @@ func testConfig() *config.Config {
 	}
 
 	return cfg
+}
+
+// RenderFull tests.
+
+func TestRenderFull_BasicGolang(t *testing.T) {
+	t.Parallel()
+
+	cfg := testConfig()
+	cfg.Agents = []string{config.AgentClaude}
+	cfg.Workflow = config.WorkflowFRD
+
+	result, err := scaffold.RenderFull(cfg, promptkit.Templates)
+	if err != nil {
+		t.Fatalf("RenderFull() error: %v", err)
+	}
+
+	// Agent Skills SKILL.md files should be present.
+	expectedSkills := []string{
+		".agents/skills/implement/SKILL.md",
+		".agents/skills/roadmap/SKILL.md",
+		".agents/skills/frd/SKILL.md",
+		".agents/skills/perf/SKILL.md",
+	}
+
+	for _, path := range expectedSkills {
+		content, ok := result[path]
+		if !ok {
+			t.Errorf("missing skill file: %s", path)
+			continue
+		}
+
+		if !strings.HasPrefix(string(content), "---\n") {
+			t.Errorf("skill %s missing YAML frontmatter", path)
+		}
+	}
+
+	// Claude legacy commands should be present.
+	for _, name := range []string{"implement", "roadmap", "frd", "perf"} {
+		path := ".claude/commands/" + name + ".md"
+		if _, ok := result[path]; !ok {
+			t.Errorf("missing Claude command: %s", path)
+		}
+	}
+
+	// Raw instruction files should NOT be in the output.
+	rawPaths := []string{
+		"instructions/instr-implement.md",
+		"instructions/instr-roadmaper.md",
+		"instructions/instr-frd.md",
+		"instructions/instr-perf.md",
+	}
+
+	for _, path := range rawPaths {
+		if _, ok := result[path]; ok {
+			t.Errorf("raw instruction file should be removed: %s", path)
+		}
+	}
+
+	// Non-instruction base files should still be present.
+	for _, path := range []string{"AGENTS.md", ".golangci.yml", "Makefile"} {
+		if _, ok := result[path]; !ok {
+			t.Errorf("missing expected base file: %s", path)
+		}
+	}
+
+	// All files should have provenance or frontmatter.
+	for path, content := range result {
+		s := string(content)
+		hasProvenance := strings.Contains(s, "Generated by promptkit")
+
+		hasFrontmatter := strings.HasPrefix(s, "---\n")
+		if !hasProvenance && !hasFrontmatter {
+			t.Errorf("file %s has neither provenance comment nor frontmatter", path)
+		}
+	}
+}
+
+func TestRenderFull_JourneyWorkflow(t *testing.T) {
+	t.Parallel()
+
+	cfg := testConfig()
+	cfg.Agents = []string{config.AgentClaude}
+	cfg.Workflow = config.WorkflowJourney
+
+	result, err := scaffold.RenderFull(cfg, promptkit.Templates)
+	if err != nil {
+		t.Fatalf("RenderFull() error: %v", err)
+	}
+
+	// Journey skill should be present instead of FRD.
+	if _, ok := result[".agents/skills/journey/SKILL.md"]; !ok {
+		t.Error("missing journey skill file for journey workflow")
+	}
+
+	// FRD skill should NOT be present.
+	if _, ok := result[".agents/skills/frd/SKILL.md"]; ok {
+		t.Error("frd skill should not be present in journey workflow")
+	}
+
+	// Base skills should still be present.
+	for _, name := range []string{"implement", "roadmap", "perf"} {
+		path := ".agents/skills/" + name + "/SKILL.md"
+		if _, ok := result[path]; !ok {
+			t.Errorf("missing base skill: %s", path)
+		}
+	}
+}
+
+func TestRenderFull_NoAgents(t *testing.T) {
+	t.Parallel()
+
+	tmplFS := fstest.MapFS{
+		"templates/golang/README.md.tmpl": &fstest.MapFile{
+			Data: []byte("# {{.ProjectName}}"),
+		},
+	}
+
+	cfg := testConfig()
+	cfg.Agents = nil
+
+	result, err := scaffold.RenderFull(cfg, tmplFS)
+	if err != nil {
+		t.Fatalf("RenderFull() error: %v", err)
+	}
+
+	// With no agents, rendered output should just contain the template files
+	// plus provenance, and no agent-specific files.
+	if _, ok := result["README.md"]; !ok {
+		t.Error("expected README.md in output")
+	}
+
+	// No agent-specific directories should be present.
+	for path := range result {
+		if strings.HasPrefix(path, ".agents/") ||
+			strings.HasPrefix(path, ".claude/") ||
+			strings.HasPrefix(path, ".cursor/") {
+			t.Errorf("unexpected agent file when agents is empty: %s", path)
+		}
+	}
+}
+
+func TestRenderFull_MultipleAgents(t *testing.T) {
+	t.Parallel()
+
+	cfg := testConfig()
+	cfg.Agents = []string{config.AgentClaude, config.AgentCursor, config.AgentGemini}
+	cfg.Workflow = config.WorkflowFRD
+
+	result, err := scaffold.RenderFull(cfg, promptkit.Templates)
+	if err != nil {
+		t.Fatalf("RenderFull() error: %v", err)
+	}
+
+	// Claude-specific.
+	if _, ok := result[".claude/commands/implement.md"]; !ok {
+		t.Error("missing Claude command file")
+	}
+
+	// Cursor-specific.
+	if _, ok := result[".cursor/rules/agents.mdc"]; !ok {
+		t.Error("missing Cursor rules file")
+	}
+
+	// Gemini-specific.
+	if _, ok := result["GEMINI.md"]; !ok {
+		t.Error("missing GEMINI.md")
+	}
+
+	if _, ok := result[".gemini/commands/implement.toml"]; !ok {
+		t.Error("missing Gemini command file")
+	}
+}
+
+// RenderFullWithOverrides tests.
+
+func TestRenderFullWithOverrides_Basic(t *testing.T) {
+	t.Parallel()
+
+	tmplFS := fstest.MapFS{
+		"templates/golang/README.md.tmpl": &fstest.MapFile{
+			Data: []byte("# Embedded {{.ProjectName}}"),
+		},
+		"templates/golang/instructions/instr-implement.md.tmpl": &fstest.MapFile{
+			Data: []byte("implement instruction for {{.ProjectName}}"),
+		},
+	}
+
+	overrideDir := t.TempDir()
+
+	// Create an override for README.md.
+	if err := os.WriteFile(
+		filepath.Join(overrideDir, "README.md.tmpl"),
+		[]byte("# Overridden {{.ProjectName}}"),
+		0o600,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := testConfig()
+	cfg.Agents = []string{config.AgentClaude}
+	cfg.Workflow = config.WorkflowFRD
+
+	result, err := scaffold.RenderFullWithOverrides(cfg, tmplFS, overrideDir)
+	if err != nil {
+		t.Fatalf("RenderFullWithOverrides() error: %v", err)
+	}
+
+	// Override content should take precedence.
+	readme, ok := result["README.md"]
+	if !ok {
+		t.Fatal("expected README.md in output")
+	}
+
+	if !strings.Contains(string(readme), "Overridden") {
+		t.Errorf("expected override content, got: %s", string(readme))
+	}
+
+	// Agent adapter files should still be generated.
+	if _, skillOK := result[".agents/skills/implement/SKILL.md"]; !skillOK {
+		t.Error("missing skill file after override")
+	}
+
+	// Provenance should still be applied.
+	for path, content := range result {
+		s := string(content)
+		hasProvenance := strings.Contains(s, "Generated by promptkit")
+
+		hasFrontmatter := strings.HasPrefix(s, "---\n")
+		if !hasProvenance && !hasFrontmatter {
+			t.Errorf("file %s has neither provenance nor frontmatter after override", path)
+		}
+	}
+}
+
+func TestRenderFullWithOverrides_EmptyOverrideDir(t *testing.T) {
+	t.Parallel()
+
+	tmplFS := fstest.MapFS{
+		"templates/golang/README.md.tmpl": &fstest.MapFile{
+			Data: []byte("# {{.ProjectName}}"),
+		},
+	}
+
+	cfg := testConfig()
+	cfg.Agents = nil
+
+	// Empty override dir — should behave like RenderFull.
+	result, err := scaffold.RenderFullWithOverrides(cfg, tmplFS, "")
+	if err != nil {
+		t.Fatalf("RenderFullWithOverrides() error: %v", err)
+	}
+
+	if _, ok := result["README.md"]; !ok {
+		t.Error("expected README.md in output with empty override dir")
+	}
+}
+
+// writeFileAtomic tests (exercised through Apply).
+
+func TestWriteFileAtomic_Success(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	content := []byte("atomic write content")
+
+	rendered := map[string][]byte{
+		"output.txt": content,
+	}
+
+	if err := scaffold.Apply(rendered, dir, scaffold.ModeForce); err != nil {
+		t.Fatalf("Apply() error: %v", err)
+	}
+
+	got, err := os.ReadFile(filepath.Join(dir, "output.txt"))
+	if err != nil {
+		t.Fatalf("reading file: %v", err)
+	}
+
+	if !bytes.Equal(got, content) {
+		t.Errorf("content = %q, want %q", string(got), string(content))
+	}
+
+	// Verify no temp files remain.
+	entries, _ := os.ReadDir(dir)
+	for _, e := range entries {
+		if strings.HasSuffix(e.Name(), ".promptkit.tmp") {
+			t.Errorf("temp file left behind: %s", e.Name())
+		}
+	}
+}
+
+func TestWriteFileAtomic_SetsPermissions(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+
+	// .sh files get 0o755 permissions; non-.sh files get 0o644.
+	rendered := map[string][]byte{
+		"run.sh":    []byte("#!/bin/bash\necho hello"),
+		"config.md": []byte("# Config"),
+	}
+
+	if err := scaffold.Apply(rendered, dir, scaffold.ModeForce); err != nil {
+		t.Fatalf("Apply() error: %v", err)
+	}
+
+	// Shell script should be executable (0o755).
+	shInfo, err := os.Stat(filepath.Join(dir, "run.sh"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	shPerm := shInfo.Mode().Perm()
+	if shPerm != 0o755 {
+		t.Errorf("run.sh permission = %o, want 0755", shPerm)
+	}
+
+	// Non-shell file should be 0o644.
+	mdInfo, err := os.Stat(filepath.Join(dir, "config.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mdPerm := mdInfo.Mode().Perm()
+	if mdPerm != 0o644 {
+		t.Errorf("config.md permission = %o, want 0644", mdPerm)
+	}
+}
+
+func TestWriteFileAtomic_OverwritesExisting(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	filePath := filepath.Join(dir, "file.txt")
+
+	// Write initial content.
+	if err := os.WriteFile(filePath, []byte("original content"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	// Overwrite via Apply (ModeForce triggers writeFileAtomic on existing file).
+	rendered := map[string][]byte{
+		"file.txt": []byte("updated content"),
+	}
+
+	if err := scaffold.Apply(rendered, dir, scaffold.ModeForce); err != nil {
+		t.Fatalf("Apply() error: %v", err)
+	}
+
+	got, err := os.ReadFile(filePath)
+	if err != nil {
+		t.Fatalf("reading file: %v", err)
+	}
+
+	if string(got) != "updated content" {
+		t.Errorf("content = %q, want %q", string(got), "updated content")
+	}
+}
+
+func TestWriteFileAtomic_LargeContent(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+
+	// Create a large content buffer (1 MB).
+	large := make([]byte, 1<<20)
+	for i := range large {
+		large[i] = byte('A' + (i % 26))
+	}
+
+	rendered := map[string][]byte{
+		"large.txt": large,
+	}
+
+	if err := scaffold.Apply(rendered, dir, scaffold.ModeForce); err != nil {
+		t.Fatalf("Apply() error: %v", err)
+	}
+
+	got, err := os.ReadFile(filepath.Join(dir, "large.txt"))
+	if err != nil {
+		t.Fatalf("reading file: %v", err)
+	}
+
+	if len(got) != len(large) {
+		t.Errorf("content length = %d, want %d", len(got), len(large))
+	}
+
+	// Verify no temp files remain.
+	entries, _ := os.ReadDir(dir)
+	for _, e := range entries {
+		if strings.HasSuffix(e.Name(), ".promptkit.tmp") {
+			t.Errorf("temp file left behind: %s", e.Name())
+		}
+	}
+}
+
+func TestWriteFileAtomic_NestedDirectory(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+
+	rendered := map[string][]byte{
+		"a/b/c/nested.txt": []byte("deeply nested"),
+	}
+
+	if err := scaffold.Apply(rendered, dir, scaffold.ModeForce); err != nil {
+		t.Fatalf("Apply() error: %v", err)
+	}
+
+	got, err := os.ReadFile(filepath.Join(dir, "a", "b", "c", "nested.txt"))
+	if err != nil {
+		t.Fatalf("reading file: %v", err)
+	}
+
+	if string(got) != "deeply nested" {
+		t.Errorf("content = %q, want %q", string(got), "deeply nested")
+	}
+
+	// Verify no temp files in nested directories.
+	entries, _ := os.ReadDir(filepath.Join(dir, "a", "b", "c"))
+	for _, e := range entries {
+		if strings.HasSuffix(e.Name(), ".promptkit.tmp") {
+			t.Errorf("temp file left behind in nested dir: %s", e.Name())
+		}
+	}
 }

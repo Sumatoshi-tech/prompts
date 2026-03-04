@@ -1,15 +1,17 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"sort"
 	"strings"
 
+	"github.com/spf13/cobra"
+
 	promptkit "github.com/Sumatoshi-tech/promptkit"
 	"github.com/Sumatoshi-tech/promptkit/internal/config"
 	"github.com/Sumatoshi-tech/promptkit/internal/scaffold"
-	"github.com/spf13/cobra"
 )
 
 var diffFlags struct {
@@ -116,6 +118,7 @@ func runDiffUpstream() error {
 		switch {
 		case d.IsNew:
 			lines := strings.SplitN(string(d.Rendered), "\n", 11)
+
 			preview := lines
 			if len(preview) > 10 {
 				preview = preview[:10]
@@ -135,6 +138,7 @@ func runDiffUpstream() error {
 
 		case len(d.Rendered) == 0:
 			lines := strings.SplitN(string(d.Existing), "\n", 11)
+
 			preview := lines
 			if len(preview) > 10 {
 				preview = preview[:10]
@@ -161,5 +165,5 @@ func runDiffUpstream() error {
 		}
 	}
 
-	return fmt.Errorf("configs differ (use 'promptkit config explain' to understand differences)")
+	return errors.New("configs differ (use 'promptkit config explain' to understand differences)")
 }

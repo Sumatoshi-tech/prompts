@@ -7,12 +7,13 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/spf13/cobra"
+
 	promptkit "github.com/Sumatoshi-tech/promptkit"
 	"github.com/Sumatoshi-tech/promptkit/internal/adapters"
 	"github.com/Sumatoshi-tech/promptkit/internal/config"
 	"github.com/Sumatoshi-tech/promptkit/internal/prompt"
 	"github.com/Sumatoshi-tech/promptkit/internal/scaffold"
-	"github.com/spf13/cobra"
 )
 
 var initFlags struct {
@@ -42,7 +43,10 @@ func init() {
 	initCmd.Flags().StringVar(&initFlags.binary, "binary", "", "binary name")
 	initCmd.Flags().BoolVar(&initFlags.cgo, "cgo", false, "enable CGO support")
 	initCmd.Flags().BoolVar(&initFlags.docker, "docker", true, "enable Docker support")
-	initCmd.Flags().StringSliceVar(&initFlags.agents, "ai", []string{"claude"}, "target AI agents (claude,codex,copilot,cursor,gemini,windsurf)")
+	initCmd.Flags().StringSliceVar(
+		&initFlags.agents, "ai", []string{"claude"},
+		"target AI agents (claude,codex,copilot,cursor,gemini,windsurf)",
+	)
 	initCmd.Flags().StringVar(&initFlags.ecosystem, "ecosystem", "golang", "template ecosystem (golang, rust, zig)")
 	initCmd.Flags().StringVar(&initFlags.workflow, "workflow", "frd", "development workflow (frd, journey)")
 
@@ -70,7 +74,7 @@ Example (non-interactive):
 	RunE: runInit,
 }
 
-func runInit(cmd *cobra.Command, args []string) error {
+func runInit(_ *cobra.Command, args []string) error {
 	targetDir := "."
 	if len(args) > 0 {
 		targetDir = args[0]
@@ -81,23 +85,25 @@ func runInit(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("resolving path: %w", err)
 	}
 
-	if err := os.MkdirAll(targetDir, 0o755); err != nil {
+	if err = os.MkdirAll(targetDir, 0o750); err != nil {
 		return fmt.Errorf("creating directory: %w", err)
 	}
 
 	// Check if config already exists.
 	configPath := filepath.Join(targetDir, config.FileName)
 	configExists := false
-	if _, err := os.Stat(configPath); err == nil {
+
+	if _, statErr := os.Stat(configPath); statErr == nil {
 		configExists = true
+
 		if !initFlags.force {
 			return fmt.Errorf("%s already exists (use --force to overwrite)", config.FileName)
 		}
 	}
 
 	// Prevent concurrent execution.
-	if err := scaffold.AcquireLock(targetDir); err != nil {
-		return err
+	if lockErr := scaffold.AcquireLock(targetDir); lockErr != nil {
+		return lockErr
 	}
 	defer scaffold.ReleaseLock(targetDir)
 
@@ -134,10 +140,11 @@ func runInit(cmd *cobra.Command, args []string) error {
 	if initFlags.dryRun {
 		printFilesByAgent(rendered, cfg.Agents, cfg.Workflow)
 		fmt.Println("\nDry run — no files were written.")
+
 		return nil
 	}
 
-	if err := config.Save(cfg, targetDir); err != nil {
+	if err = config.Save(cfg, targetDir); err != nil {
 		return fmt.Errorf("saving config: %w", err)
 	}
 
@@ -160,9 +167,10 @@ func runInit(cmd *cobra.Command, args []string) error {
 
 	// Backup existing files before applying (for rollback on failure).
 	existingPaths := make([]string, 0)
+
 	for path := range rendered {
 		fullPath := filepath.Join(targetDir, path)
-		if _, err := os.Stat(fullPath); err == nil {
+		if _, err = os.Stat(fullPath); err == nil {
 			existingPaths = append(existingPaths, path)
 		}
 	}
@@ -175,7 +183,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	if err := scaffold.Apply(rendered, targetDir, scaffold.ModeCreate); err != nil {
+	if err = scaffold.Apply(rendered, targetDir, scaffold.ModeCreate); err != nil {
 		if backupDir != "" {
 			if restoreErr := scaffold.RestoreBackup(backupDir, targetDir); restoreErr != nil {
 				fmt.Fprintf(os.Stderr, "Warning: backup restore also failed: %v\n", restoreErr)
@@ -189,7 +197,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 
 	// Store checksums in config.
 	cfg.Checksums = scaffold.ComputeChecksums(rendered)
-	if err := config.Save(cfg, targetDir); err != nil {
+	if err = config.Save(cfg, targetDir); err != nil {
 		return fmt.Errorf("saving config checksums: %w", err)
 	}
 
@@ -290,11 +298,12 @@ func printFilesByAgent(rendered map[string][]byte, agents []string, workflow str
 	agentFiles := make(map[string][]string)
 
 	for path, fa := range ownership {
-		if len(fa.Agents) == 0 {
+		switch {
+		case len(fa.Agents) == 0:
 			basePaths = append(basePaths, path)
-		} else if fa.IsShared {
+		case fa.IsShared:
 			basePaths = append(basePaths, path)
-		} else {
+		default:
 			agent := fa.Agents[0]
 			agentFiles[agent] = append(agentFiles[agent], path)
 		}

@@ -1,6 +1,10 @@
-# promptkit
+<p align="center">
+  <img src="assets/logo.png" alt="promptkit" width="600">
+</p>
 
-[![License](https://img.shields.io/badge/license-proprietary-blue)](LICENSE)
+<p align="center">
+  <a href="LICENSE.md"><img src="https://img.shields.io/badge/license-Apache%202.0-blue" alt="License"></a>
+</p>
 
 A CLI that scaffolds spec-driven development workflows for AI coding agents. Supports Go, Rust, and Zig ecosystems with FRD-based or journey-based workflows.
 
@@ -152,4 +156,4 @@ See [Configuration Reference](docs/configuration.md) for all fields, validation 
 
 ## License
 
-See [LICENSE](LICENSE) file.
+Licensed under the [Apache License 2.0](LICENSE.md).

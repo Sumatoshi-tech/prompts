@@ -5,8 +5,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/Sumatoshi-tech/promptkit/internal/config"
 	"github.com/spf13/cobra"
+
+	"github.com/Sumatoshi-tech/promptkit/internal/config"
 )
 
 func init() {
@@ -37,6 +38,7 @@ func runConfigExplain(_ *cobra.Command, args []string) error {
 	if len(args) == 1 {
 		key := args[0]
 		files, desc, ok := config.ExplainField(key)
+
 		if !ok {
 			// List valid keys in the error.
 			keys := make([]string, 0, len(config.FieldFiles))
@@ -50,6 +52,7 @@ func runConfigExplain(_ *cobra.Command, args []string) error {
 		}
 
 		fmt.Printf("%s\n", key)
+
 		if desc != "" {
 			fmt.Printf("  %s\n", desc)
 		}
@@ -77,6 +80,7 @@ func runConfigExplain(_ *cobra.Command, args []string) error {
 	for _, key := range keys {
 		files, desc, _ := config.ExplainField(key)
 		fmt.Printf("  %s\n", key)
+
 		if desc != "" {
 			fmt.Printf("    %s\n", desc)
 		}

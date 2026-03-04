@@ -5,10 +5,11 @@ import (
 	"os"
 	"strings"
 
+	"github.com/spf13/cobra"
+
 	promptkit "github.com/Sumatoshi-tech/promptkit"
 	"github.com/Sumatoshi-tech/promptkit/internal/config"
 	"github.com/Sumatoshi-tech/promptkit/internal/scaffold"
-	"github.com/spf13/cobra"
 )
 
 var cleanFlags struct {
@@ -73,22 +74,22 @@ func runClean(_ *cobra.Command, _ []string) error {
 
 		var answer string
 
-		fmt.Fscanln(os.Stdin, &answer)
+		_, _ = fmt.Fscanln(os.Stdin, &answer)
 
-		if strings.ToLower(answer) != "y" {
+		if !strings.EqualFold(answer, "y") {
 			fmt.Println("Aborted.")
 			return nil
 		}
 	}
 
-	if err := scaffold.RemoveFiles(dir, stale); err != nil {
+	if err = scaffold.RemoveFiles(dir, stale); err != nil {
 		return fmt.Errorf("removing stale files: %w", err)
 	}
 
 	// Update manifest.
 	cfg.GeneratedFiles = scaffold.FileManifest(rendered)
 
-	if err := config.Save(cfg, dir); err != nil {
+	if err = config.Save(cfg, dir); err != nil {
 		return fmt.Errorf("saving config: %w", err)
 	}
 

@@ -1,6 +1,9 @@
 package config
 
-import "sort"
+import (
+	"maps"
+	"sort"
+)
 
 // FieldFiles maps config YAML keys to the output files they affect.
 // Ecosystem-specific fields are registered via EcosystemModule.FieldEntries.
@@ -20,16 +23,14 @@ var FieldFiles = map[string][]string{
 	"features.docker":           {"AGENTS.md", "Makefile"},
 	"features.benchmarks":       {"AGENTS.md", "Makefile"},
 	"features.cgo_libs":         {"Makefile", "scripts/deadcode-filter.sh"},
-	"agents":                    {}, // affects agent-specific placement, not template content
+	"agents":                    {}, // affects agent-specific placement, not template content.
 	"workflow":                  {"instructions/instr-implement.md", "instructions/instr-roadmaper.md"},
 }
 
 // AllFieldFiles returns FieldFiles merged with ecosystem module field entries.
 func AllFieldFiles() map[string][]string {
 	result := make(map[string][]string, len(FieldFiles))
-	for k, v := range FieldFiles {
-		result[k] = v
-	}
+	maps.Copy(result, FieldFiles)
 
 	for _, mod := range AllEcosystems() {
 		for _, fe := range mod.FieldEntries {

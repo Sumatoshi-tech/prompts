@@ -1,3 +1,4 @@
+// Package cli implements the promptkit command-line interface.
 package cli
 
 import (
@@ -27,7 +28,10 @@ Workflow:
 
 func init() {
 	rootCmd.PersistentFlags().BoolVarP(&rootFlags.verbose, "verbose", "v", false, "enable verbose output")
-	rootCmd.PersistentFlags().StringVar(&rootFlags.configPath, "config", "", "path to config directory (default: search from current directory upward)")
+	rootCmd.PersistentFlags().StringVar(
+		&rootFlags.configPath, "config", "",
+		"path to config directory (default: search from current directory upward)",
+	)
 }
 
 // Execute runs the root command.

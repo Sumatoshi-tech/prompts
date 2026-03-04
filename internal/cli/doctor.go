@@ -2,16 +2,18 @@ package cli
 
 import (
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
 
+	"github.com/spf13/cobra"
+
 	promptkit "github.com/Sumatoshi-tech/promptkit"
 	"github.com/Sumatoshi-tech/promptkit/internal/adapters"
 	"github.com/Sumatoshi-tech/promptkit/internal/config"
 	"github.com/Sumatoshi-tech/promptkit/internal/scaffold"
-	"github.com/spf13/cobra"
 )
 
 func init() {
@@ -41,7 +43,7 @@ func runDoctor(_ *cobra.Command, _ []string) error {
 	cfg, err := config.Load(dir)
 	if err != nil {
 		fmt.Printf("  [err] Config: %v\n", err)
-		return fmt.Errorf("doctor found errors")
+		return errors.New("doctor found errors")
 	}
 
 	fmt.Println("  [ok] Config loads and validates")
@@ -53,8 +55,9 @@ func runDoctor(_ *cobra.Command, _ []string) error {
 
 	for _, path := range cfg.GeneratedFiles {
 		fullPath := filepath.Join(dir, path)
-		if _, err := os.Stat(fullPath); err != nil {
+		if _, err = os.Stat(fullPath); err != nil {
 			fmt.Printf("  [err] Missing: %s\n", path)
+
 			missing++
 		}
 	}
@@ -70,10 +73,14 @@ func runDoctor(_ *cobra.Command, _ []string) error {
 	rendered, err := scaffold.RenderFullWithOverrides(cfg, promptkit.Templates, cfg.TemplateOver)
 	if err != nil {
 		fmt.Printf("  [err] Render failed: %v\n", err)
-		return fmt.Errorf("doctor found errors")
+		return errors.New("doctor found errors")
 	}
 
-	ownership, _ := adapters.FileOwnership(rendered, cfg.Agents, cfg.Workflow)
+	ownership, err := adapters.FileOwnership(rendered, cfg.Agents, cfg.Workflow)
+	if err != nil {
+		fmt.Printf("  [err] File ownership: %v\n", err)
+		return errors.New("doctor found errors")
+	}
 
 	for _, agent := range cfg.Agents {
 		total := 0
@@ -85,7 +92,7 @@ func runDoctor(_ *cobra.Command, _ []string) error {
 					total++
 
 					fullPath := filepath.Join(dir, fa.Path)
-					if _, err := os.Stat(fullPath); err == nil {
+					if _, err = os.Stat(fullPath); err == nil {
 						present++
 					}
 				}
@@ -96,6 +103,7 @@ func runDoctor(_ *cobra.Command, _ []string) error {
 			fmt.Printf("  [ok] %s: %d/%d agent files present\n", agent, present, total)
 		} else {
 			fmt.Printf("  [err] %s: %d/%d agent files present\n", agent, present, total)
+
 			hasErrors = true
 		}
 	}
@@ -111,18 +119,22 @@ func runDoctor(_ *cobra.Command, _ []string) error {
 
 		sort.Strings(paths)
 
+		var data []byte
+
 		for _, path := range paths {
 			storedSum := cfg.Checksums[path]
 			fullPath := filepath.Join(dir, path)
 
-			data, err := os.ReadFile(fullPath)
+			data, err = os.ReadFile(fullPath)
 			if err != nil {
 				continue
 			}
 
 			diskSum := fmt.Sprintf("%x", sha256.Sum256(data))
+
 			if diskSum != storedSum {
 				fmt.Printf("  [warn] %s: modified since last generation\n", path)
+
 				modified++
 			}
 		}
@@ -151,7 +163,7 @@ func runDoctor(_ *cobra.Command, _ []string) error {
 	}
 
 	if hasErrors {
-		return fmt.Errorf("doctor found errors")
+		return errors.New("doctor found errors")
 	}
 
 	return nil

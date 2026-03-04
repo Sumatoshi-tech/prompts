@@ -1,3 +1,4 @@
+// Package scaffold renders templates and manages generated file lifecycle.
 package scaffold
 
 import (
@@ -10,14 +11,16 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"text/template"
 	"time"
 
-	"github.com/Sumatoshi-tech/promptkit/internal/adapters"
-	"github.com/Sumatoshi-tech/promptkit/internal/config"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
+
+	"github.com/Sumatoshi-tech/promptkit/internal/adapters"
+	"github.com/Sumatoshi-tech/promptkit/internal/config"
 )
 
 const tmplSuffix = ".tmpl"
@@ -69,10 +72,12 @@ func Render(cfg *config.Config, tmplFS fs.FS) (map[string][]byte, error) {
 		outPath := strings.TrimPrefix(path, tmplDir+"/")
 
 		// If it's a .tmpl file, render it; otherwise copy as-is.
-		if strings.HasSuffix(outPath, tmplSuffix) {
-			outPath = strings.TrimSuffix(outPath, tmplSuffix)
+		if trimmed, ok := strings.CutSuffix(outPath, tmplSuffix); ok {
+			outPath = trimmed
 
-			rendered, err := renderTemplate(path, string(data), cfg)
+			var rendered []byte
+
+			rendered, err = renderTemplate(path, string(data), cfg)
 			if err != nil {
 				return fmt.Errorf("rendering %s: %w", path, err)
 			}
@@ -104,8 +109,12 @@ func RenderWithOverrides(cfg *config.Config, tmplFS fs.FS, overrideDir string) (
 	}
 
 	info, err := os.Stat(overrideDir)
-	if err != nil || !info.IsDir() {
+	if os.IsNotExist(err) || (err == nil && !info.IsDir()) {
 		return result, nil
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("checking override dir: %w", err)
 	}
 
 	overrides, err := loadOverrides(overrideDir)
@@ -115,12 +124,14 @@ func RenderWithOverrides(cfg *config.Config, tmplFS fs.FS, overrideDir string) (
 
 	for path, data := range overrides {
 		outPath := path
-		if strings.HasSuffix(outPath, tmplSuffix) {
-			outPath = strings.TrimSuffix(outPath, tmplSuffix)
+		if trimmed, ok := strings.CutSuffix(outPath, tmplSuffix); ok {
+			outPath = trimmed
 
 			fullPath := filepath.Join(overrideDir, path)
 
-			rendered, err := renderTemplate(path, string(data), cfg)
+			var rendered []byte
+
+			rendered, err = renderTemplate(path, string(data), cfg)
 			if err != nil {
 				return nil, fmt.Errorf("rendering override %s (from %s): %w", outPath, fullPath, err)
 			}
@@ -165,7 +176,7 @@ func loadOverrides(dir string) (map[string][]byte, error) {
 // Files are written atomically using write-to-temp-then-rename.
 func Apply(rendered map[string][]byte, targetDir string, mode ApplyMode) error {
 	for relPath, content := range rendered {
-		outPath := filepath.Join(targetDir, relPath)
+		outPath := filepath.Clean(filepath.Join(targetDir, relPath))
 
 		if mode == ModeCreate {
 			if _, err := os.Stat(outPath); err == nil {
@@ -174,44 +185,54 @@ func Apply(rendered map[string][]byte, targetDir string, mode ApplyMode) error {
 		}
 
 		dir := filepath.Dir(outPath)
-		if err := os.MkdirAll(dir, 0o755); err != nil {
+		if err := os.MkdirAll(dir, 0o750); err != nil {
 			return fmt.Errorf("creating directory %s: %w", dir, err)
 		}
 
 		perm := filePermission(relPath)
 
-		// Atomic write: write to temp file in same directory, then rename.
-		tmpFile, err := os.CreateTemp(dir, ".promptkit-*.tmp")
-		if err != nil {
-			return fmt.Errorf("creating temp file for %s: %w", relPath, err)
+		if err := writeFileAtomic(outPath, content, perm, relPath); err != nil {
+			return err
 		}
+	}
 
-		tmpPath := tmpFile.Name()
+	return nil
+}
 
-		if _, err := tmpFile.Write(content); err != nil {
-			tmpFile.Close()
-			os.Remove(tmpPath)
+// writeFileAtomic writes content to outPath atomically via a temp file.
+// The temp file is created in the same directory to ensure rename works.
+func writeFileAtomic(outPath string, content []byte, perm os.FileMode, label string) error {
+	outPath = filepath.Clean(outPath)
+	tmpPath := outPath + ".promptkit.tmp"
 
-			return fmt.Errorf("writing temp file for %s: %w", relPath, err)
-		}
+	tmpFile, err := os.OpenFile(tmpPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
+	if err != nil {
+		return fmt.Errorf("creating temp file for %s: %w", label, err)
+	}
 
-		if err := tmpFile.Close(); err != nil {
-			os.Remove(tmpPath)
+	if _, err = tmpFile.Write(content); err != nil {
+		tmpFile.Close()
+		os.Remove(tmpPath)
 
-			return fmt.Errorf("closing temp file for %s: %w", relPath, err)
-		}
+		return fmt.Errorf("writing temp file for %s: %w", label, err)
+	}
 
-		if err := os.Chmod(tmpPath, perm); err != nil {
-			os.Remove(tmpPath)
+	if err = tmpFile.Close(); err != nil {
+		os.Remove(tmpPath)
 
-			return fmt.Errorf("setting permissions for %s: %w", relPath, err)
-		}
+		return fmt.Errorf("closing temp file for %s: %w", label, err)
+	}
 
-		if err := os.Rename(tmpPath, outPath); err != nil {
-			os.Remove(tmpPath)
+	if err = os.Chmod(tmpPath, perm); err != nil {
+		os.Remove(tmpPath)
 
-			return fmt.Errorf("renaming temp file for %s: %w", relPath, err)
-		}
+		return fmt.Errorf("setting permissions for %s: %w", label, err)
+	}
+
+	if err = os.Rename(tmpPath, outPath); err != nil {
+		os.Remove(tmpPath)
+
+		return fmt.Errorf("renaming temp file for %s: %w", label, err)
 	}
 
 	return nil
@@ -221,7 +242,7 @@ func Apply(rendered map[string][]byte, targetDir string, mode ApplyMode) error {
 // Only files that already exist on disk are backed up.
 // Returns the backup directory path.
 func BackupFiles(targetDir string, paths []string) (string, error) {
-	timestamp := fmt.Sprintf("%d", time.Now().Unix())
+	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
 	backupDir := filepath.Join(targetDir, ".promptkit", "backups", timestamp)
 
 	backed := 0
@@ -237,11 +258,11 @@ func BackupFiles(targetDir string, paths []string) (string, error) {
 
 		destPath := filepath.Join(backupDir, relPath)
 
-		if err := os.MkdirAll(filepath.Dir(destPath), 0o755); err != nil {
+		if err = os.MkdirAll(filepath.Dir(destPath), 0o750); err != nil {
 			return "", fmt.Errorf("creating backup directory: %w", err)
 		}
 
-		if err := os.WriteFile(destPath, data, 0o644); err != nil {
+		if err = os.WriteFile(destPath, data, 0o600); err != nil {
 			return "", fmt.Errorf("backing up %s: %w", relPath, err)
 		}
 
@@ -274,11 +295,11 @@ func RestoreBackup(backupDir, targetDir string) error {
 
 		destPath := filepath.Join(targetDir, relPath)
 
-		if err := os.MkdirAll(filepath.Dir(destPath), 0o755); err != nil {
+		if err = os.MkdirAll(filepath.Dir(destPath), 0o750); err != nil {
 			return fmt.Errorf("creating directory for restore: %w", err)
 		}
 
-		if err := os.WriteFile(destPath, data, 0o644); err != nil {
+		if err = os.WriteFile(destPath, data, 0o600); err != nil {
 			return fmt.Errorf("restoring %s: %w", relPath, err)
 		}
 
@@ -371,19 +392,15 @@ func AddProvenance(rendered map[string][]byte) map[string][]byte {
 	return result
 }
 
+const provenanceHashComment = "# Generated by promptkit -- do not edit. Regenerate with: promptkit update\n\n"
+
 // provenanceComment returns the appropriate provenance header for a file type.
 func provenanceComment(path string) string {
-	base := filepath.Base(path)
-
 	switch {
 	case strings.HasSuffix(path, ".md"), strings.HasSuffix(path, ".mdc"):
 		return "<!-- Generated by promptkit -- do not edit. Regenerate with: promptkit update -->\n\n"
-	case strings.HasSuffix(path, ".toml"):
-		return "# Generated by promptkit -- do not edit. Regenerate with: promptkit update\n\n"
-	case base == "Makefile":
-		return "# Generated by promptkit -- do not edit. Regenerate with: promptkit update\n\n"
 	default:
-		return "# Generated by promptkit -- do not edit. Regenerate with: promptkit update\n\n"
+		return provenanceHashComment
 	}
 }
 
@@ -394,7 +411,9 @@ func RenderSingle(cfg *config.Config, tmplFS fs.FS, overrideDir, name string) ([
 	if overrideDir != "" {
 		overridePath := filepath.Join(overrideDir, name+tmplSuffix)
 		if data, err := os.ReadFile(overridePath); err == nil {
-			rendered, err := renderTemplate(overridePath, string(data), cfg)
+			var rendered []byte
+
+			rendered, err = renderTemplate(overridePath, string(data), cfg)
 			if err != nil {
 				return nil, fmt.Errorf("rendering override %s (from %s): %w", name, overridePath, err)
 			}
@@ -500,12 +519,12 @@ func UnifiedDiff(oldContent, newContent []byte, path string) string {
 
 	var sb strings.Builder
 
-	sb.WriteString(fmt.Sprintf("--- a/%s\n", path))
-	sb.WriteString(fmt.Sprintf("+++ b/%s\n", path))
+	fmt.Fprintf(&sb, "--- a/%s\n", path)
+	fmt.Fprintf(&sb, "+++ b/%s\n", path)
 
 	for _, h := range hunks {
-		sb.WriteString(fmt.Sprintf("@@ -%d,%d +%d,%d @@\n",
-			h.oldStart+1, h.oldCount, h.newStart+1, h.newCount))
+		fmt.Fprintf(&sb, "@@ -%d,%d +%d,%d @@\n",
+			h.oldStart+1, h.oldCount, h.newStart+1, h.newCount)
 
 		for _, line := range h.lines {
 			sb.WriteString(line)
@@ -535,6 +554,7 @@ func computeHunks(oldLines, newLines []string) []hunk {
 
 	// Group operations into hunks with context.
 	var hunks []hunk
+
 	var current *hunk
 
 	oldIdx := 0
@@ -595,14 +615,11 @@ func computeHunks(oldLines, newLines []string) []hunk {
 	return hunks
 }
 
-func startHunk(ops []editOp, opIdx, oldIdx, newIdx int, oldLines []string, contextLines int) *hunk {
+func startHunk(_ []editOp, _, oldIdx, newIdx int, oldLines []string, contextLines int) *hunk {
 	h := &hunk{}
 
 	// Add leading context.
-	ctxStart := oldIdx - contextLines
-	if ctxStart < 0 {
-		ctxStart = 0
-	}
+	ctxStart := max(oldIdx-contextLines, 0)
 
 	h.oldStart = ctxStart
 	h.newStart = newIdx - (oldIdx - ctxStart)
@@ -799,6 +816,7 @@ func DiffRendered(local, upstream map[string][]byte) []FileDiff {
 				Rendered: localContent,
 				IsNew:    true,
 			})
+
 			continue
 		}
 
@@ -843,8 +861,8 @@ func SaveOverrideChecksum(overrideDir, name string, embeddedContent []byte) {
 		return
 	}
 
-	os.MkdirAll(filepath.Dir(checksumPath), 0o755)
-	os.WriteFile(checksumPath, data, 0o644)
+	_ = os.MkdirAll(filepath.Dir(checksumPath), 0o750)
+	_ = os.WriteFile(checksumPath, data, 0o600)
 }
 
 // CheckOverrideStaleness returns override file names whose upstream embedded
@@ -880,6 +898,7 @@ func CheckOverrideStaleness(tmplFS fs.FS, overrideDir, ecosystem string) []strin
 		}
 
 		sum := sha256.Sum256(data)
+
 		currentSum := hex.EncodeToString(sum[:])
 		if currentSum != savedSum {
 			stale = append(stale, name)
@@ -898,7 +917,7 @@ func loadOverrideChecksums(path string) map[string]string {
 	}
 
 	var checksums map[string]string
-	if err := json.Unmarshal(data, &checksums); err != nil {
+	if err = json.Unmarshal(data, &checksums); err != nil {
 		return make(map[string]string)
 	}
 

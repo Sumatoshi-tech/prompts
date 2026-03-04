@@ -9,6 +9,8 @@ import (
 )
 
 func TestPlaceForAgents_Claude(t *testing.T) {
+	t.Parallel()
+
 	rendered := testRendered()
 
 	files, err := adapters.PlaceForAgents(rendered, []string{config.AgentClaude}, config.WorkflowFRD)
@@ -32,6 +34,8 @@ func TestPlaceForAgents_Claude(t *testing.T) {
 }
 
 func TestPlaceForAgents_SkillMDHasFrontmatter(t *testing.T) {
+	t.Parallel()
+
 	rendered := testRendered()
 
 	files, err := adapters.PlaceForAgents(rendered, []string{config.AgentClaude}, config.WorkflowFRD)
@@ -60,6 +64,8 @@ func TestPlaceForAgents_SkillMDHasFrontmatter(t *testing.T) {
 }
 
 func TestPlaceForAgents_Codex(t *testing.T) {
+	t.Parallel()
+
 	rendered := testRendered()
 
 	files, err := adapters.PlaceForAgents(rendered, []string{config.AgentCodex}, config.WorkflowFRD)
@@ -75,6 +81,8 @@ func TestPlaceForAgents_Codex(t *testing.T) {
 }
 
 func TestPlaceForAgents_Copilot(t *testing.T) {
+	t.Parallel()
+
 	rendered := testRendered()
 
 	files, err := adapters.PlaceForAgents(rendered, []string{config.AgentCopilot}, config.WorkflowFRD)
@@ -90,6 +98,8 @@ func TestPlaceForAgents_Copilot(t *testing.T) {
 }
 
 func TestPlaceForAgents_Cursor(t *testing.T) {
+	t.Parallel()
+
 	rendered := testRendered()
 
 	files, err := adapters.PlaceForAgents(rendered, []string{config.AgentCursor}, config.WorkflowFRD)
@@ -119,6 +129,8 @@ func TestPlaceForAgents_Cursor(t *testing.T) {
 }
 
 func TestPlaceForAgents_Gemini(t *testing.T) {
+	t.Parallel()
+
 	rendered := testRendered()
 
 	files, err := adapters.PlaceForAgents(rendered, []string{config.AgentGemini}, config.WorkflowFRD)
@@ -151,6 +163,8 @@ func TestPlaceForAgents_Gemini(t *testing.T) {
 }
 
 func TestPlaceForAgents_Windsurf(t *testing.T) {
+	t.Parallel()
+
 	rendered := testRendered()
 
 	files, err := adapters.PlaceForAgents(rendered, []string{config.AgentWindsurf}, config.WorkflowFRD)
@@ -167,6 +181,8 @@ func TestPlaceForAgents_Windsurf(t *testing.T) {
 }
 
 func TestPlaceForAgents_MultipleAgents(t *testing.T) {
+	t.Parallel()
+
 	rendered := testRendered()
 
 	agents := []string{config.AgentClaude, config.AgentGemini, config.AgentCursor}
@@ -193,6 +209,8 @@ func TestPlaceForAgents_MultipleAgents(t *testing.T) {
 }
 
 func TestPlaceForAgents_UnknownAgent(t *testing.T) {
+	t.Parallel()
+
 	rendered := testRendered()
 
 	_, err := adapters.PlaceForAgents(rendered, []string{"unknown"}, config.WorkflowFRD)
@@ -202,6 +220,8 @@ func TestPlaceForAgents_UnknownAgent(t *testing.T) {
 }
 
 func TestRemoveInstructionPaths(t *testing.T) {
+	t.Parallel()
+
 	paths := adapters.RemoveInstructionPaths()
 
 	if len(paths) == 0 {
@@ -245,7 +265,10 @@ func assertContainsPath(t *testing.T, paths map[string]bool, expected string) {
 }
 
 func TestFileOwnership_SingleAgent(t *testing.T) {
+	t.Parallel()
+
 	rendered := testRendered()
+
 	ownership, err := adapters.FileOwnership(rendered, []string{config.AgentClaude}, config.WorkflowFRD)
 	if err != nil {
 		t.Fatalf("FileOwnership() error: %v", err)
@@ -256,17 +279,22 @@ func TestFileOwnership_SingleAgent(t *testing.T) {
 	if !ok {
 		t.Fatal("missing .claude/commands/implement.md in ownership")
 	}
+
 	if len(fa.Agents) != 1 || fa.Agents[0] != config.AgentClaude {
 		t.Errorf("expected [claude], got %v", fa.Agents)
 	}
+
 	if fa.IsShared {
 		t.Error("expected IsShared=false for single-agent file")
 	}
 }
 
 func TestFileOwnership_MultipleAgents(t *testing.T) {
+	t.Parallel()
+
 	rendered := testRendered()
 	agents := []string{config.AgentClaude, config.AgentCursor}
+
 	ownership, err := adapters.FileOwnership(rendered, agents, config.WorkflowFRD)
 	if err != nil {
 		t.Fatalf("FileOwnership() error: %v", err)
@@ -277,14 +305,18 @@ func TestFileOwnership_MultipleAgents(t *testing.T) {
 	if !ok {
 		t.Fatal("missing .agents/skills/implement/SKILL.md in ownership")
 	}
+
 	if len(fa.Agents) < 2 {
 		t.Errorf("expected multiple agents, got %v", fa.Agents)
 	}
 }
 
 func TestFileOwnership_SharedVsSpecific(t *testing.T) {
+	t.Parallel()
+
 	rendered := testRendered()
 	agents := []string{config.AgentClaude, config.AgentGemini}
+
 	ownership, err := adapters.FileOwnership(rendered, agents, config.WorkflowFRD)
 	if err != nil {
 		t.Fatalf("FileOwnership() error: %v", err)
@@ -302,6 +334,7 @@ func TestFileOwnership_SharedVsSpecific(t *testing.T) {
 		if fa.IsShared {
 			t.Error("GEMINI.md should not be shared")
 		}
+
 		if len(fa.Agents) != 1 || fa.Agents[0] != config.AgentGemini {
 			t.Errorf("GEMINI.md expected [gemini], got %v", fa.Agents)
 		}
@@ -311,6 +344,8 @@ func TestFileOwnership_SharedVsSpecific(t *testing.T) {
 }
 
 func TestPlaceForAgents_JourneyWorkflow(t *testing.T) {
+	t.Parallel()
+
 	rendered := testRenderedJourney()
 
 	files, err := adapters.PlaceForAgents(rendered, []string{config.AgentClaude}, config.WorkflowJourney)
@@ -331,14 +366,18 @@ func TestPlaceForAgents_JourneyWorkflow(t *testing.T) {
 	if paths[".agents/skills/frd/SKILL.md"] {
 		t.Error("journey workflow should not produce frd skill")
 	}
+
 	if paths[".claude/commands/frd.md"] {
 		t.Error("journey workflow should not produce frd command")
 	}
 }
 
 func TestRemoveInstructionPaths_IncludesAllWorkflows(t *testing.T) {
+	t.Parallel()
+
 	paths := adapters.RemoveInstructionPaths()
 	pathSet := make(map[string]bool)
+
 	for _, p := range paths {
 		pathSet[p] = true
 	}
@@ -347,9 +386,11 @@ func TestRemoveInstructionPaths_IncludesAllWorkflows(t *testing.T) {
 	if !pathSet["instructions/instr-frd.md"] {
 		t.Error("RemoveInstructionPaths should include instr-frd.md")
 	}
+
 	if !pathSet["instructions/instr-journey.md"] {
 		t.Error("RemoveInstructionPaths should include instr-journey.md")
 	}
+
 	if !pathSet["instructions/instr-implement.md"] {
 		t.Error("RemoveInstructionPaths should include instr-implement.md")
 	}
@@ -372,6 +413,8 @@ func testRenderedJourney() map[string][]byte {
 // .toml, .mdc, workflows). The raw instruction body should appear in every
 // agent's output regardless of wrapper format.
 func TestSkillContent_SemanticEquivalence(t *testing.T) {
+	t.Parallel()
+
 	rendered := testRendered()
 	allAgents := []string{
 		config.AgentClaude,
@@ -402,6 +445,7 @@ func TestSkillContent_SemanticEquivalence(t *testing.T) {
 
 		// Find the "implement" skill output for this agent.
 		found := false
+
 		for _, f := range files {
 			content := normalize(string(f.Content))
 			if strings.Contains(content, expected) {
@@ -409,6 +453,7 @@ func TestSkillContent_SemanticEquivalence(t *testing.T) {
 				break
 			}
 		}
+
 		if !found {
 			t.Errorf("agent %s: implement skill body not found in any output file", agent)
 		}

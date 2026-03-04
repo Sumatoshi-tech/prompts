@@ -1,3 +1,4 @@
+// Package main provides the promptkit CLI entry point.
 package main
 
 import (

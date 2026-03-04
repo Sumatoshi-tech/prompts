@@ -8,10 +8,11 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/spf13/cobra"
+
 	promptkit "github.com/Sumatoshi-tech/promptkit"
 	"github.com/Sumatoshi-tech/promptkit/internal/config"
 	"github.com/Sumatoshi-tech/promptkit/internal/scaffold"
-	"github.com/spf13/cobra"
 )
 
 var extractFlags struct {
@@ -133,7 +134,7 @@ func runTemplateAdd(_ *cobra.Command, args []string) error {
 	overrideDir := ".promptkit/templates"
 	destPath := filepath.Join(overrideDir, name+".tmpl")
 
-	if err := os.MkdirAll(filepath.Dir(destPath), 0o755); err != nil {
+	if err = os.MkdirAll(filepath.Dir(destPath), 0o750); err != nil {
 		return fmt.Errorf("creating override directory: %w", err)
 	}
 
@@ -142,7 +143,7 @@ func runTemplateAdd(_ *cobra.Command, args []string) error {
 		return fmt.Errorf("reading source file: %w", err)
 	}
 
-	if err := os.WriteFile(destPath, data, 0o644); err != nil {
+	if err = os.WriteFile(destPath, data, 0o600); err != nil {
 		return fmt.Errorf("writing override: %w", err)
 	}
 
@@ -193,6 +194,7 @@ func runTemplateExtract(_ *cobra.Command, args []string) error {
 	data, err := fs.ReadFile(promptkit.Templates, tmplPath)
 	if err != nil {
 		staticPath := tmplDir + "/" + name
+
 		data, err = fs.ReadFile(promptkit.Templates, staticPath)
 		if err != nil {
 			return fmt.Errorf("template %q not found in embedded templates", name)
@@ -203,16 +205,16 @@ func runTemplateExtract(_ *cobra.Command, args []string) error {
 	destPath := filepath.Join(overrideDir, name+".tmpl")
 
 	if !extractFlags.force {
-		if _, err := os.Stat(destPath); err == nil {
+		if _, err = os.Stat(destPath); err == nil {
 			return fmt.Errorf("override already exists: %s (use --force to overwrite)", destPath)
 		}
 	}
 
-	if err := os.MkdirAll(filepath.Dir(destPath), 0o755); err != nil {
+	if err = os.MkdirAll(filepath.Dir(destPath), 0o750); err != nil {
 		return fmt.Errorf("creating override directory: %w", err)
 	}
 
-	if err := os.WriteFile(destPath, data, 0o644); err != nil {
+	if err = os.WriteFile(destPath, data, 0o600); err != nil {
 		return fmt.Errorf("writing extracted template: %w", err)
 	}
 
@@ -236,12 +238,13 @@ Useful when creating or editing template overrides.`,
 func runTemplateVars(_ *cobra.Command, _ []string) error {
 	fmt.Println("Available template variables (accessed as .FieldName):")
 	fmt.Println()
-	printStructFields(reflect.TypeOf(config.Config{}), ".", "  ")
+	printStructFields(reflect.TypeFor[config.Config](), ".", "  ")
+
 	return nil
 }
 
 func printStructFields(t reflect.Type, prefix, indent string) {
-	for i := 0; i < t.NumField(); i++ {
+	for i := range t.NumField() {
 		field := t.Field(i)
 
 		yamlTag := field.Tag.Get("yaml")

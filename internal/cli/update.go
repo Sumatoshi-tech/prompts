@@ -1,8 +1,10 @@
 package cli
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -11,11 +13,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/spf13/cobra"
+
 	promptkit "github.com/Sumatoshi-tech/promptkit"
 	"github.com/Sumatoshi-tech/promptkit/internal/adapters"
 	"github.com/Sumatoshi-tech/promptkit/internal/config"
 	"github.com/Sumatoshi-tech/promptkit/internal/scaffold"
-	"github.com/spf13/cobra"
 )
 
 var updateFlags struct {
@@ -47,7 +50,7 @@ agent files -> compute diffs -> show changes -> approve -> apply atomically.
 Use --dry-run to preview changes without writing.
 Use --verify to run the analysis command after applying.
 Use --explain to see a detailed pipeline description before running.`,
-	RunE: func(cmd *cobra.Command, _ []string) error {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		dir, err := resolveConfigDir()
 		if err != nil {
 			return err
@@ -106,26 +109,31 @@ func RunUpdate(opts UpdateOptions) error {
 		fmt.Fprintln(w, "  7. Prompt for approval (or auto-approve with --yes)")
 		fmt.Fprintln(w, "  8. Back up existing files, write approved files atomically")
 		fmt.Fprintln(w, "  9. Remove stale files, update manifest")
+
 		if opts.Verify {
 			fmt.Fprintln(w, " 10. Run verification command")
 		}
+
 		fmt.Fprintln(w)
 	}
 
 	// Determine step count for progress indicators.
-	totalSteps := 4 // load, render, diff, apply
+	totalSteps := 4 // load, render, diff, apply.
 	if opts.DryRun {
-		totalSteps = 3 // load, render, diff (no apply)
+		totalSteps = 3 // load, render, diff (no apply).
 	}
+
 	if opts.Verify {
-		totalSteps++ // adds verify step
+		totalSteps++ // adds verify step.
 	}
+
 	step := 0
 
 	progress := func(msg string) {
 		if opts.Quiet {
 			return
 		}
+
 		step++
 		fmt.Fprintf(w, "[%d/%d] %s\n", step, totalSteps, msg)
 	}
@@ -145,11 +153,13 @@ func RunUpdate(opts UpdateOptions) error {
 		staleOverrides := scaffold.CheckOverrideStaleness(promptkit.Templates, overrideDir, cfg.Ecosystem)
 		if len(staleOverrides) > 0 {
 			fmt.Fprintln(w, "Warning: These template overrides may be stale (upstream template changed):")
+
 			for _, s := range staleOverrides {
 				name := strings.TrimSuffix(s, ".tmpl")
 				fmt.Fprintf(w, "  %s/%s\n", overrideDir, s)
 				fmt.Fprintf(w, "  Run 'promptkit template extract %s --force' to update.\n", name)
 			}
+
 			fmt.Fprintln(w)
 		}
 	}
@@ -177,9 +187,11 @@ func RunUpdate(opts UpdateOptions) error {
 		}
 
 		// Log per-file agent ownership.
-		if ownership, err := adapters.FileOwnership(rendered, cfg.Agents, cfg.Workflow); err == nil {
+		var ownership map[string]adapters.FileAgent
+		if ownership, err = adapters.FileOwnership(rendered, cfg.Agents, cfg.Workflow); err == nil {
 			for _, agent := range cfg.Agents {
 				var files []string
+
 				for path, fa := range ownership {
 					if !fa.IsShared {
 						for _, a := range fa.Agents {
@@ -189,6 +201,7 @@ func RunUpdate(opts UpdateOptions) error {
 						}
 					}
 				}
+
 				if len(files) > 0 {
 					sort.Strings(files)
 					fmt.Fprintf(w, "  %s: %d file(s)\n", agent, len(files))
@@ -241,6 +254,7 @@ func RunUpdate(opts UpdateOptions) error {
 
 	// Display summary with change and agent annotations.
 	reverseMap := config.ReverseFieldMap()
+	// Best-effort; display continues without annotations.
 	ownership, _ := adapters.FileOwnership(rendered, cfg.Agents, cfg.Workflow)
 
 	if len(diffs) > 0 {
@@ -327,7 +341,7 @@ func RunUpdate(opts UpdateOptions) error {
 
 		// Exit with code 1 if there are changes (useful for CI drift detection).
 		if len(diffs) > 0 || len(stale) > 0 {
-			return fmt.Errorf("files are out of date (use 'promptkit update' to apply)")
+			return errors.New("files are out of date (use 'promptkit update' to apply)")
 		}
 
 		return nil
@@ -351,18 +365,19 @@ func RunUpdate(opts UpdateOptions) error {
 			fmt.Fprintf(w, "Apply %s? [y/n/a/q] ", d.Path)
 
 			var answer string
-			fmt.Fscanln(opts.Stdin, &answer)
+
+			_, _ = fmt.Fscanln(opts.Stdin, &answer)
 
 			switch strings.ToLower(answer) {
 			case "y":
 				approvedDiffs = append(approvedDiffs, d)
 			case "a":
 				applyAll = true
+
 				approvedDiffs = append(approvedDiffs, d)
 			case "q":
 				goto doneApproval
 			default:
-				// "n" or anything else — skip
 			}
 		}
 
@@ -379,21 +394,23 @@ func RunUpdate(opts UpdateOptions) error {
 				fmt.Fprintf(w, "Remove stale %s? [y/n/a/q] ", s)
 
 				var answer string
-				fmt.Fscanln(opts.Stdin, &answer)
+
+				_, _ = fmt.Fscanln(opts.Stdin, &answer)
 
 				switch strings.ToLower(answer) {
 				case "y":
 					approvedStale = append(approvedStale, s)
 				case "a":
 					applyAll = true
+
 					approvedStale = append(approvedStale, s)
 				case "q":
 					goto doneApproval
 				default:
-					// skip
 				}
 			}
 		}
+
 	doneApproval:
 
 		if len(approvedDiffs) == 0 && len(approvedStale) == 0 {
@@ -406,7 +423,7 @@ func RunUpdate(opts UpdateOptions) error {
 
 		var answer string
 
-		fmt.Fscanln(opts.Stdin, &answer)
+		_, _ = fmt.Fscanln(opts.Stdin, &answer)
 
 		if answer != "y" && answer != "Y" {
 			fmt.Fprintln(w, "Aborted.")
@@ -430,7 +447,6 @@ func RunUpdate(opts UpdateOptions) error {
 			// File is unchanged — include it (no approval needed).
 			toApply[path] = content
 		}
-		// Otherwise: file has changes but was not approved — skip.
 	}
 
 	// Apply changes.
@@ -451,7 +467,7 @@ func RunUpdate(opts UpdateOptions) error {
 		fmt.Fprintf(w, "  Backed up files to %s\n", backupDir)
 	}
 
-	if err := scaffold.Apply(toApply, opts.Dir, scaffold.ModeForce); err != nil {
+	if err = scaffold.Apply(toApply, opts.Dir, scaffold.ModeForce); err != nil {
 		// Attempt restore on failure.
 		if backupDir != "" {
 			if restoreErr := scaffold.RestoreBackup(backupDir, opts.Dir); restoreErr != nil {
@@ -466,7 +482,7 @@ func RunUpdate(opts UpdateOptions) error {
 
 	// Remove approved stale files.
 	if len(approvedStale) > 0 {
-		if err := scaffold.RemoveFiles(opts.Dir, approvedStale); err != nil {
+		if err = scaffold.RemoveFiles(opts.Dir, approvedStale); err != nil {
 			return fmt.Errorf("removing stale files: %w", err)
 		}
 	}
@@ -475,7 +491,7 @@ func RunUpdate(opts UpdateOptions) error {
 	cfg.GeneratedFiles = scaffold.FileManifest(rendered)
 	cfg.Checksums = scaffold.ComputeChecksums(rendered)
 
-	if err := config.Save(cfg, opts.Dir); err != nil {
+	if err = config.Save(cfg, opts.Dir); err != nil {
 		return fmt.Errorf("saving config manifest: %w", err)
 	}
 
@@ -500,7 +516,7 @@ func RunUpdate(opts UpdateOptions) error {
 	if opts.Verify {
 		progress("Running verification...")
 
-		if err := runVerify(w, opts.Dir, cfg.AnalysisCmd); err != nil {
+		if err = runVerify(w, opts.Dir, cfg.AnalysisCmd); err != nil {
 			if backupDir != "" {
 				fmt.Fprintf(w, "To restore: copy files from %s\n", backupDir)
 			}
@@ -558,7 +574,7 @@ func runVerify(w io.Writer, dir, analysisCmd string) error {
 
 	fmt.Fprintf(w, "\nRunning verification: %s %s\n", cmd, strings.Join(args, " "))
 
-	c := exec.Command(cmd, args...)
+	c := exec.CommandContext(context.Background(), cmd, args...)
 	c.Dir = dir
 	c.Stdout = w
 	c.Stderr = w
