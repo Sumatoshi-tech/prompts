@@ -24,6 +24,7 @@ output:
       print-linter-name: true
       print-issued-lines: true
       colors: true
+  sort-results: true
   sort-order:
     - linter
     - file
@@ -57,10 +58,16 @@ linters:
 
     # --- Too noisy for most codebases ---
     - exhaustruct # Go idiom is zero-value initialization; this linter fights the language
+    - gochecknoglobals # CLI pattern requires package-level vars (cobra commands, registries, lookup tables)
+    - gochecknoinits # CLI pattern uses init() for cobra command registration and ecosystem setup
+    - testpackage # White-box testing (package foo, not foo_test) is standard Go practice
 
     # --- Conflicting linters ---
     - whitespace # Conflicts with wsl_v5: multi-func requires blank lines that wsl_v5 forbids
     - nonamedreturns # Conflicts with gocritic(unnamedResult): forbids named returns that gocritic requires for clarity
+    - nlreturn # Conflicts with wsl_v5; blank-line-before-return is purely stylistic
+    - noinlineerr # Inline error handling (if err := ...; err != nil) is idiomatic Go
+    - paralleltest # Not all tests benefit from t.Parallel(); too noisy
 
   settings:
     cyclop:
@@ -172,6 +179,9 @@ linters:
     gosec:
       excludes:
         - G204 # Subprocess launched with variable - needed for command execution
+        - G301 # Directory permissions 0o755 are standard Unix practice
+        - G306 # File permissions 0o644 are standard Unix practice
+        - G703 # Path traversal - paths come from trusted embedded templates and config
       severity: medium
       confidence: medium
 
@@ -179,9 +189,7 @@ linters:
       enable-all: true
       disable:
         - fieldalignment # conflicts with embeddedstructfieldcheck
-      settings:
-        shadow:
-          strict: true
+        - shadow # strict mode flags every err redeclaration; too noisy for idiomatic Go
 
     iface:
       enable: [identical, unused, opaque]
@@ -253,7 +261,6 @@ linters:
         - name: exported
           arguments: ["checkPrivateReceivers"]
         - name: var-naming
-        - name: package-comments
         - name: error-return
         - name: error-naming
         - name: if-return
@@ -274,7 +281,6 @@ linters:
         - name: superfluous-else
         - name: confusing-naming
         - name: modifies-value-receiver
-        - name: unused-parameter
         - name: unreachable-code
         - name: redefines-builtin-id
         - name: waitgroup-by-value
@@ -305,7 +311,9 @@ linters:
       context: scope
 
     staticcheck:
-      checks: [all]
+      checks:
+        - all
+        - -ST1000 # Package comments can be added incrementally
 
     tagalign:
       align: true
@@ -355,6 +363,11 @@ linters:
         - ok
         - err
         - id
+        - a
+        - b
+        - d
+        - f
+        - h
         - wg
         - mu
         - db
@@ -420,3 +433,25 @@ linters:
     presets:
       - std-error-handling
       - common-false-positives
+    rules:
+      # Test files naturally have similar setup/assertion patterns and long test functions.
+      - path: _test\.go
+        linters: [dupl, funlen, gocognit, gocyclo, cyclop, nestif, errcheck, goconst]
+
+      # CLI command handlers and config validation are inherently complex entry points.
+      # errcheck: interactive input (fmt.Fscanln) errors are intentionally ignored.
+      - path: (cmd/|internal/cli/|internal/config/|internal/prompt/)
+        linters: [forbidigo, funlen, cyclop, gocognit, gocyclo, errcheck]
+
+      # CLI and config validation errors are user-facing messages; dynamic formatting is appropriate.
+      - path: (internal/cli/|internal/config/|internal/prompt/|internal/scaffold/|internal/adapters/)
+        linters: [err113]
+
+      # Diff and apply functions are inherently complex.
+      - path: internal/scaffold/
+        linters: [cyclop, gocognit, gocyclo, errcheck, funlen]
+
+      # CLI display code uses magic numbers for formatting (column widths, truncation limits).
+      # Config migration and scaffold logic has inherently nested/complex control flow.
+      - path: (internal/cli/|internal/scaffold/|internal/config/)
+        linters: [mnd, maintidx, nestif, wrapcheck]

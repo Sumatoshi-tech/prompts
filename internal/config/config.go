@@ -12,6 +12,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// Configuration constants.
 const (
 	FileName           = ".promptkit.yaml"
 	defaultCoverageMin = 85
@@ -252,6 +253,7 @@ func (c *Config) Validate() error {
 	for _, agent := range c.Agents {
 		if !ValidAgents[agent] {
 			suggestion := closestAgent(agent)
+
 			hint := ""
 			if suggestion != "" {
 				hint = fmt.Sprintf("; did you mean %q?", suggestion)
@@ -265,6 +267,7 @@ func (c *Config) Validate() error {
 
 	if !ValidEcosystem(c.Ecosystem) {
 		suggestion := ClosestEcosystem(c.Ecosystem)
+
 		hint := ""
 		if suggestion != "" {
 			hint = fmt.Sprintf("; did you mean %q?", suggestion)
@@ -277,6 +280,7 @@ func (c *Config) Validate() error {
 
 	if !ValidWorkflows[c.Workflow] {
 		suggestion := closestWorkflow(c.Workflow)
+
 		hint := ""
 		if suggestion != "" {
 			hint = fmt.Sprintf("; did you mean %q?", suggestion)
@@ -330,6 +334,7 @@ func editDistance(a, b string) int {
 	if la == 0 {
 		return lb
 	}
+
 	if lb == 0 {
 		return la
 	}
@@ -353,13 +358,7 @@ func editDistance(a, b string) int {
 			del := prev[j] + 1
 			sub := prev[j-1] + cost
 
-			curr[j] = ins
-			if del < curr[j] {
-				curr[j] = del
-			}
-			if sub < curr[j] {
-				curr[j] = sub
-			}
+			curr[j] = min(ins, del, sub)
 		}
 
 		prev = curr
@@ -402,7 +401,9 @@ func Load(dir string) (*Config, error) {
 	}
 
 	if bytes.Contains(data, []byte("<<<<<<<")) {
-		return nil, fmt.Errorf("parsing config: file contains unresolved merge conflict markers — resolve conflicts, then run 'promptkit update'")
+		return nil, errors.New(
+			"parsing config: file contains unresolved merge conflict markers — resolve conflicts, then run 'promptkit update'",
+		)
 	}
 
 	cfg := Default()
@@ -449,7 +450,7 @@ func MarshalCommented(cfg *Config) []byte {
 	sb.WriteString("# Tip: After resolving merge conflicts, run 'promptkit update --dry-run' to validate.\n\n")
 
 	sb.WriteString("# Config schema version (do not edit)\n")
-	sb.WriteString(fmt.Sprintf("version: %d\n\n", cfg.Version))
+	fmt.Fprintf(&sb, "version: %d\n\n", cfg.Version)
 
 	sb.WriteString("# Project name used in AGENTS.md identity and Makefile\n")
 	writeYAMLField(&sb, "project_name", cfg.ProjectName)
@@ -470,31 +471,31 @@ func MarshalCommented(cfg *Config) []byte {
 	sb.WriteString("binaries:\n")
 
 	for _, b := range cfg.Binaries {
-		sb.WriteString(fmt.Sprintf("  - name: %s\n", b.Name))
-		sb.WriteString(fmt.Sprintf("    cmd_path: %s\n", b.CmdPath))
+		fmt.Fprintf(&sb, "  - name: %s\n", b.Name)
+		fmt.Fprintf(&sb, "    cmd_path: %s\n", b.CmdPath)
 	}
 
 	sb.WriteString("\n# Code quality thresholds — enforced in AGENTS.md, .golangci.yml, and Makefile\n")
 	sb.WriteString("quality:\n")
-	sb.WriteString(fmt.Sprintf("  coverage_min: %d\n", cfg.Quality.CoverageMin))
-	sb.WriteString(fmt.Sprintf("  coverage_critical: %d\n", cfg.Quality.CoverageCritical))
-	sb.WriteString(fmt.Sprintf("  complexity_max: %d\n", cfg.Quality.ComplexityMax))
-	sb.WriteString(fmt.Sprintf("  line_length: %d\n", cfg.Quality.LineLength))
+	fmt.Fprintf(&sb, "  coverage_min: %d\n", cfg.Quality.CoverageMin)
+	fmt.Fprintf(&sb, "  coverage_critical: %d\n", cfg.Quality.CoverageCritical)
+	fmt.Fprintf(&sb, "  complexity_max: %d\n", cfg.Quality.ComplexityMax)
+	fmt.Fprintf(&sb, "  line_length: %d\n", cfg.Quality.LineLength)
 
 	sb.WriteString("\n# Feature flags — control conditional sections in Makefile and templates\n")
 	sb.WriteString("features:\n")
-	sb.WriteString(fmt.Sprintf("  cgo: %t\n", cfg.Features.CGO))
-	sb.WriteString(fmt.Sprintf("  docker: %t\n", cfg.Features.Docker))
-	sb.WriteString(fmt.Sprintf("  benchmarks: %t\n", cfg.Features.Benchmarks))
+	fmt.Fprintf(&sb, "  cgo: %t\n", cfg.Features.CGO)
+	fmt.Fprintf(&sb, "  docker: %t\n", cfg.Features.Docker)
+	fmt.Fprintf(&sb, "  benchmarks: %t\n", cfg.Features.Benchmarks)
 
 	if len(cfg.Features.CGOLibs) > 0 {
 		sb.WriteString("  cgo_libs:\n")
 
 		for _, lib := range cfg.Features.CGOLibs {
-			sb.WriteString(fmt.Sprintf("    - name: %s\n", lib.Name))
-			sb.WriteString(fmt.Sprintf("      pkg_config: %s\n", lib.PkgConfig))
-			sb.WriteString(fmt.Sprintf("      include: %s\n", lib.Include))
-			sb.WriteString(fmt.Sprintf("      lib_dir: %s\n", lib.LibDir))
+			fmt.Fprintf(&sb, "    - name: %s\n", lib.Name)
+			fmt.Fprintf(&sb, "      pkg_config: %s\n", lib.PkgConfig)
+			fmt.Fprintf(&sb, "      include: %s\n", lib.Include)
+			fmt.Fprintf(&sb, "      lib_dir: %s\n", lib.LibDir)
 		}
 	}
 
@@ -502,13 +503,13 @@ func MarshalCommented(cfg *Config) []byte {
 	sb.WriteString("agents:\n")
 
 	for _, a := range cfg.Agents {
-		sb.WriteString(fmt.Sprintf("  - %s\n", a))
+		fmt.Fprintf(&sb, "  - %s\n", a)
 	}
 
-	sb.WriteString(fmt.Sprintf("\n# Template ecosystem (valid: %s)\n", strings.Join(ValidEcosystemNames(), ", ")))
+	fmt.Fprintf(&sb, "\n# Template ecosystem (valid: %s)\n", strings.Join(ValidEcosystemNames(), ", "))
 	writeYAMLField(&sb, "ecosystem", cfg.Ecosystem)
 
-	sb.WriteString(fmt.Sprintf("\n# Development workflow (valid: %s)\n", strings.Join(ValidWorkflowNames(), ", ")))
+	fmt.Fprintf(&sb, "\n# Development workflow (valid: %s)\n", strings.Join(ValidWorkflowNames(), ", "))
 	writeYAMLField(&sb, "workflow", cfg.Workflow)
 
 	if mod := GetEcosystem(cfg.Ecosystem); mod != nil && mod.CommentedFields != nil {
@@ -538,7 +539,7 @@ func MarshalCommented(cfg *Config) []byte {
 		sort.Strings(sorted)
 
 		for _, f := range sorted {
-			sb.WriteString(fmt.Sprintf("  - %s\n", f))
+			fmt.Fprintf(&sb, "  - %s\n", f)
 		}
 	}
 
@@ -550,18 +551,19 @@ func MarshalCommented(cfg *Config) []byte {
 		for k := range cfg.Checksums {
 			keys = append(keys, k)
 		}
+
 		sort.Strings(keys)
 
 		for _, k := range keys {
-			sb.WriteString(fmt.Sprintf("  %s: %s\n", k, cfg.Checksums[k]))
+			fmt.Fprintf(&sb, "  %s: %s\n", k, cfg.Checksums[k])
 		}
 	}
 
 	return []byte(sb.String())
 }
 
-func writeYAMLField(sb *strings.Builder, key string, value interface{}) {
-	sb.WriteString(fmt.Sprintf("%s: %v\n", key, value))
+func writeYAMLField(sb *strings.Builder, key string, value any) {
+	fmt.Fprintf(sb, "%s: %v\n", key, value)
 }
 
 func quoteVersion(v string) string {

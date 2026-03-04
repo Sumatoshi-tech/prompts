@@ -15,17 +15,17 @@ type AskBoolFunc func(prompt string, defaultVal bool) (bool, error)
 
 // CommentedField represents a single field to include in MarshalCommented output.
 type CommentedField struct {
-	Comment string      // e.g. "# Rust edition (e.g. \"2021\", \"2024\")"
-	Key     string      // YAML key, e.g. "rust_edition"
-	Value   interface{} // value to render
-	Quote   bool        // whether to quote the value (for version strings)
+	Comment string // e.g. "# Rust edition (e.g. \"2021\", \"2024\")".
+	Key     string // YAML key, e.g. "rust_edition".
+	Value   any    // value to render.
+	Quote   bool   // whether to quote the value (for version strings).
 }
 
 // FieldEntry describes a config field for the explain/fieldmap system.
 type FieldEntry struct {
-	Key         string   // YAML key, e.g. "rust_edition"
-	Files       []string // output files this field affects
-	Description string   // human-readable description
+	Key         string   // YAML key, e.g. "rust_edition".
+	Files       []string // output files this field affects.
+	Description string   // human-readable description.
 }
 
 // EcosystemModule encapsulates all ecosystem-specific logic.

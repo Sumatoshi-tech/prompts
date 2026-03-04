@@ -10,7 +10,7 @@ func Migrate(cfg *Config) []string {
 
 	if cfg.Version < 1 {
 		if cfg.AnalysisCmd == "" {
-			defaultCmd := "go vet ./..." // backward compat for pre-ecosystem configs
+			defaultCmd := "go vet ./..." // backward compat for pre-ecosystem configs.
 			if mod := GetEcosystem(cfg.Ecosystem); mod != nil {
 				defaultCmd = mod.DefaultAnalysisCmd
 			}
@@ -21,15 +21,17 @@ func Migrate(cfg *Config) []string {
 
 		if cfg.TemplateOver == "" {
 			cfg.TemplateOver = ".promptkit/templates"
+
 			changes = append(changes, "set template_overrides to '.promptkit/templates'")
 		}
 
 		cfg.Version = 1
 	}
 
-	if cfg.Version < 2 {
+	if cfg.Version < CurrentVersion {
 		if cfg.Workflow == "" {
 			cfg.Workflow = WorkflowFRD
+
 			changes = append(changes, "set workflow to 'frd'")
 		}
 

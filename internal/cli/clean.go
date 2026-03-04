@@ -5,10 +5,11 @@ import (
 	"os"
 	"strings"
 
+	"github.com/spf13/cobra"
+
 	promptkit "github.com/Sumatoshi-tech/promptkit"
 	"github.com/Sumatoshi-tech/promptkit/internal/config"
 	"github.com/Sumatoshi-tech/promptkit/internal/scaffold"
-	"github.com/spf13/cobra"
 )
 
 var cleanFlags struct {
@@ -73,9 +74,9 @@ func runClean(_ *cobra.Command, _ []string) error {
 
 		var answer string
 
-		fmt.Fscanln(os.Stdin, &answer)
+		_, _ = fmt.Fscanln(os.Stdin, &answer)
 
-		if strings.ToLower(answer) != "y" {
+		if !strings.EqualFold(answer, "y") {
 			fmt.Println("Aborted.")
 			return nil
 		}

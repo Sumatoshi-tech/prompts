@@ -323,9 +323,12 @@ func TestRenderFull_AllAgents(t *testing.T) {
 		Binaries:    []config.Binary{{Name: "multiagent", CmdPath: "./cmd/multiagent"}},
 		Quality:     config.Quality{CoverageMin: 85, CoverageCritical: 90, ComplexityMax: 15, LineLength: 140},
 		Features:    config.Features{Docker: true, Benchmarks: true},
-		Agents:      []string{config.AgentClaude, config.AgentCodex, config.AgentCopilot, config.AgentCursor, config.AgentGemini, config.AgentWindsurf},
-		Ecosystem:   "golang",
-		Workflow:    "frd",
+		Agents: []string{
+			config.AgentClaude, config.AgentCodex, config.AgentCopilot,
+			config.AgentCursor, config.AgentGemini, config.AgentWindsurf,
+		},
+		Ecosystem: "golang",
+		Workflow:  "frd",
 	}
 
 	result, err := scaffold.RenderFull(cfg, promptkit.Templates)
@@ -669,6 +672,7 @@ func TestRenderFull_JourneyWorkflow_Golang(t *testing.T) {
 		if strings.Contains(path, "journey") {
 			hasJourney = true
 		}
+
 		if strings.Contains(path, "/frd/") || strings.HasSuffix(path, "/frd.md") || strings.HasSuffix(path, "/frd.toml") {
 			hasFRD = true
 		}
@@ -686,9 +690,8 @@ func TestRenderFull_JourneyWorkflow_Golang(t *testing.T) {
 	for path, content := range rendered {
 		if strings.Contains(path, "implement") {
 			s := string(content)
-			if strings.Contains(s, "specs/journeys/JOURNEY-{id}.md") {
-				// Good — journey reference found.
-			} else if strings.Contains(s, "specs/frds/FRD-{id}.md") {
+			if !strings.Contains(s, "specs/journeys/JOURNEY-{id}.md") &&
+				strings.Contains(s, "specs/frds/FRD-{id}.md") {
 				t.Errorf("implement skill at %s should reference journey, not FRD", path)
 			}
 		}
@@ -723,6 +726,7 @@ func TestRenderFull_JourneyWorkflow_Rust(t *testing.T) {
 		if strings.Contains(path, "journey") {
 			hasJourney = true
 		}
+
 		if strings.Contains(path, "/frd/") || strings.HasSuffix(path, "/frd.md") || strings.HasSuffix(path, "/frd.toml") {
 			hasFRD = true
 		}

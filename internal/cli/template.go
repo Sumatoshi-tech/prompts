@@ -8,10 +8,11 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/spf13/cobra"
+
 	promptkit "github.com/Sumatoshi-tech/promptkit"
 	"github.com/Sumatoshi-tech/promptkit/internal/config"
 	"github.com/Sumatoshi-tech/promptkit/internal/scaffold"
-	"github.com/spf13/cobra"
 )
 
 var extractFlags struct {
@@ -193,6 +194,7 @@ func runTemplateExtract(_ *cobra.Command, args []string) error {
 	data, err := fs.ReadFile(promptkit.Templates, tmplPath)
 	if err != nil {
 		staticPath := tmplDir + "/" + name
+
 		data, err = fs.ReadFile(promptkit.Templates, staticPath)
 		if err != nil {
 			return fmt.Errorf("template %q not found in embedded templates", name)
@@ -236,12 +238,13 @@ Useful when creating or editing template overrides.`,
 func runTemplateVars(_ *cobra.Command, _ []string) error {
 	fmt.Println("Available template variables (accessed as .FieldName):")
 	fmt.Println()
-	printStructFields(reflect.TypeOf(config.Config{}), ".", "  ")
+	printStructFields(reflect.TypeFor[config.Config](), ".", "  ")
+
 	return nil
 }
 
 func printStructFields(t reflect.Type, prefix, indent string) {
-	for i := 0; i < t.NumField(); i++ {
+	for i := range t.NumField() {
 		field := t.Field(i)
 
 		yamlTag := field.Tag.Get("yaml")

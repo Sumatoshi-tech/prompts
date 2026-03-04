@@ -607,7 +607,7 @@ func TestValidate_EmptyAgentsList(t *testing.T) {
 
 func TestValidate_DidYouMean(t *testing.T) {
 	cfg := validConfig()
-	cfg.Agents = []string{"cluade"} // typo for "claude"
+	cfg.Agents = []string{"cluade"} // typo for "claude".
 
 	err := cfg.Validate()
 	if err == nil {
@@ -621,7 +621,7 @@ func TestValidate_DidYouMean(t *testing.T) {
 
 func TestValidate_DidYouMean_NoSuggestion(t *testing.T) {
 	cfg := validConfig()
-	cfg.Agents = []string{"zzzzzzz"} // too distant from any agent
+	cfg.Agents = []string{"zzzzzzz"} // too distant from any agent.
 
 	err := cfg.Validate()
 	if err == nil {
@@ -790,6 +790,7 @@ func TestEcosystemDescriptions_AllEcosystemsCovered(t *testing.T) {
 			t.Errorf("missing description for ecosystem %q", name)
 			continue
 		}
+
 		if desc == "" {
 			t.Errorf("empty description for ecosystem %q", name)
 		}
@@ -800,9 +801,11 @@ func TestEcosystemConstants(t *testing.T) {
 	if config.EcosystemGolang != "golang" {
 		t.Errorf("EcosystemGolang = %q, want %q", config.EcosystemGolang, "golang")
 	}
+
 	if config.EcosystemRust != "rust" {
 		t.Errorf("EcosystemRust = %q, want %q", config.EcosystemRust, "rust")
 	}
+
 	if config.EcosystemZig != "zig" {
 		t.Errorf("EcosystemZig = %q, want %q", config.EcosystemZig, "zig")
 	}
@@ -984,6 +987,7 @@ func TestAgentDescriptions_AllAgentsCovered(t *testing.T) {
 			t.Errorf("missing description for agent %q", name)
 			continue
 		}
+
 		if desc == "" {
 			t.Errorf("empty description for agent %q", name)
 		}

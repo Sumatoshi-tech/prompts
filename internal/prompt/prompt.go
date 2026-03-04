@@ -131,6 +131,7 @@ func parseAgents(input string) []string {
 		trimmed := strings.TrimSpace(strings.ToLower(part))
 		if trimmed != "" && !seen[trimmed] {
 			seen[trimmed] = true
+
 			agents = append(agents, trimmed)
 		}
 	}

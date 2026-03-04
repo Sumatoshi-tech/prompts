@@ -25,6 +25,7 @@ func TestAcquireLock_Success(t *testing.T) {
 	}
 
 	pidStr := strings.TrimSpace(string(data))
+
 	pid, err := strconv.Atoi(pidStr)
 	if err != nil {
 		t.Fatalf("parsing PID from lock file: %v", err)

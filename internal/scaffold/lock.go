@@ -24,6 +24,7 @@ func AcquireLock(dir string) error {
 
 	// Check existing lock.
 	data, err := os.ReadFile(lockPath)
+	// Stale lock — reclaim by overwriting.
 	if err == nil {
 		pidStr := strings.TrimSpace(string(data))
 		if pid, err := strconv.Atoi(pidStr); err == nil {
@@ -31,7 +32,6 @@ func AcquireLock(dir string) error {
 				return fmt.Errorf("another promptkit process (PID %d) is running in %s; remove %s if this is stale", pid, dir, lockPath)
 			}
 		}
-		// Stale lock — reclaim by overwriting.
 	}
 
 	// Write our PID.
@@ -57,5 +57,6 @@ func processAlive(pid int) bool {
 	}
 	// Signal 0 checks if the process exists without actually sending a signal.
 	err = process.Signal(syscall.Signal(0))
+
 	return err == nil
 }

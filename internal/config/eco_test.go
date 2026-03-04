@@ -133,7 +133,7 @@ func TestClosestEcosystem(t *testing.T) {
 	}
 }
 
-// --- Golang module tests ---
+// Golang module tests.
 
 func TestGolang_DefaultCmdPath(t *testing.T) {
 	mod := GetEcosystem("golang")
@@ -197,7 +197,7 @@ func TestGolang_CommentedFields(t *testing.T) {
 	}
 }
 
-// --- Rust module tests ---
+// Rust module tests.
 
 func TestRust_DefaultCmdPath(t *testing.T) {
 	got := GetEcosystem("rust").DefaultCmdPath("myapp")
@@ -280,7 +280,7 @@ func TestRust_CommentedFields(t *testing.T) {
 	}
 }
 
-// --- Zig module tests ---
+// Zig module tests.
 
 func TestZig_DefaultCmdPath(t *testing.T) {
 	got := GetEcosystem("zig").DefaultCmdPath("myapp")
