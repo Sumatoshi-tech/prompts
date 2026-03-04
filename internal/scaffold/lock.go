@@ -18,7 +18,7 @@ const lockFile = "lock"
 func AcquireLock(dir string) error {
 	lockPath := filepath.Join(dir, lockDir, lockFile)
 
-	if err := os.MkdirAll(filepath.Join(dir, lockDir), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(dir, lockDir), 0o750); err != nil {
 		return fmt.Errorf("creating lock directory: %w", err)
 	}
 
@@ -27,16 +27,21 @@ func AcquireLock(dir string) error {
 	// Stale lock — reclaim by overwriting.
 	if err == nil {
 		pidStr := strings.TrimSpace(string(data))
-		if pid, err := strconv.Atoi(pidStr); err == nil {
-			if processAlive(pid) {
-				return fmt.Errorf("another promptkit process (PID %d) is running in %s; remove %s if this is stale", pid, dir, lockPath)
+
+		var stalePID int
+		if stalePID, err = strconv.Atoi(pidStr); err == nil {
+			if processAlive(stalePID) {
+				return fmt.Errorf(
+					"another promptkit process (PID %d) is running in %s; remove %s if this is stale",
+					stalePID, dir, lockPath,
+				)
 			}
 		}
 	}
 
 	// Write our PID.
 	pid := os.Getpid()
-	if err := os.WriteFile(lockPath, []byte(strconv.Itoa(pid)+"\n"), 0o644); err != nil {
+	if err = os.WriteFile(lockPath, []byte(strconv.Itoa(pid)+"\n"), 0o600); err != nil {
 		return fmt.Errorf("writing lock file: %w", err)
 	}
 

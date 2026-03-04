@@ -67,7 +67,6 @@ linters:
     - nonamedreturns # Conflicts with gocritic(unnamedResult): forbids named returns that gocritic requires for clarity
     - nlreturn # Conflicts with wsl_v5; blank-line-before-return is purely stylistic
     - noinlineerr # Inline error handling (if err := ...; err != nil) is idiomatic Go
-    - paralleltest # Not all tests benefit from t.Parallel(); too noisy
 
   settings:
     cyclop:
@@ -179,9 +178,6 @@ linters:
     gosec:
       excludes:
         - G204 # Subprocess launched with variable - needed for command execution
-        - G301 # Directory permissions 0o755 are standard Unix practice
-        - G306 # File permissions 0o644 are standard Unix practice
-        - G703 # Path traversal - paths come from trusted embedded templates and config
       severity: medium
       confidence: medium
 
@@ -189,7 +185,9 @@ linters:
       enable-all: true
       disable:
         - fieldalignment # conflicts with embeddedstructfieldcheck
-        - shadow # strict mode flags every err redeclaration; too noisy for idiomatic Go
+      settings:
+        shadow:
+          strict: true
 
     iface:
       enable: [identical, unused, opaque]
@@ -261,6 +259,7 @@ linters:
         - name: exported
           arguments: ["checkPrivateReceivers"]
         - name: var-naming
+        - name: package-comments
         - name: error-return
         - name: error-naming
         - name: if-return
@@ -281,6 +280,7 @@ linters:
         - name: superfluous-else
         - name: confusing-naming
         - name: modifies-value-receiver
+        - name: unused-parameter
         - name: unreachable-code
         - name: redefines-builtin-id
         - name: waitgroup-by-value
@@ -311,9 +311,7 @@ linters:
       context: scope
 
     staticcheck:
-      checks:
-        - all
-        - -ST1000 # Package comments can be added incrementally
+      checks: [all]
 
     tagalign:
       align: true

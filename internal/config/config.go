@@ -1,3 +1,4 @@
+// Package config handles loading, validating, and saving promptkit configuration.
 package config
 
 import (
@@ -377,7 +378,7 @@ func FindConfig(dir string) (string, error) {
 
 	for {
 		path := filepath.Join(abs, FileName)
-		if _, err := os.Stat(path); err == nil {
+		if _, err = os.Stat(path); err == nil {
 			return abs, nil
 		}
 
@@ -411,19 +412,19 @@ func Load(dir string) (*Config, error) {
 	decoder := yaml.NewDecoder(bytes.NewReader(data))
 	decoder.KnownFields(true)
 
-	if err := decoder.Decode(cfg); err != nil {
+	if err = decoder.Decode(cfg); err != nil {
 		return nil, fmt.Errorf("parsing config: %w", err)
 	}
 
 	// Run forward migrations.
 	changes := Migrate(cfg)
 	if len(changes) > 0 {
-		if err := Save(cfg, dir); err != nil {
+		if err = Save(cfg, dir); err != nil {
 			return nil, fmt.Errorf("saving migrated config: %w", err)
 		}
 	}
 
-	if err := cfg.Validate(); err != nil {
+	if err = cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("validating config: %w", err)
 	}
 
@@ -435,7 +436,7 @@ func Save(cfg *Config, dir string) error {
 	data := MarshalCommented(cfg)
 	path := filepath.Join(dir, FileName)
 
-	if err := os.WriteFile(path, data, 0o644); err != nil {
+	if err := os.WriteFile(path, data, 0o600); err != nil {
 		return fmt.Errorf("writing config: %w", err)
 	}
 

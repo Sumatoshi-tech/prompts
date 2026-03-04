@@ -82,14 +82,14 @@ func runClean(_ *cobra.Command, _ []string) error {
 		}
 	}
 
-	if err := scaffold.RemoveFiles(dir, stale); err != nil {
+	if err = scaffold.RemoveFiles(dir, stale); err != nil {
 		return fmt.Errorf("removing stale files: %w", err)
 	}
 
 	// Update manifest.
 	cfg.GeneratedFiles = scaffold.FileManifest(rendered)
 
-	if err := config.Save(cfg, dir); err != nil {
+	if err = config.Save(cfg, dir); err != nil {
 		return fmt.Errorf("saving config: %w", err)
 	}
 

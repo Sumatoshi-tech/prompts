@@ -55,7 +55,7 @@ func runDoctor(_ *cobra.Command, _ []string) error {
 
 	for _, path := range cfg.GeneratedFiles {
 		fullPath := filepath.Join(dir, path)
-		if _, err := os.Stat(fullPath); err != nil {
+		if _, err = os.Stat(fullPath); err != nil {
 			fmt.Printf("  [err] Missing: %s\n", path)
 
 			missing++
@@ -92,7 +92,7 @@ func runDoctor(_ *cobra.Command, _ []string) error {
 					total++
 
 					fullPath := filepath.Join(dir, fa.Path)
-					if _, err := os.Stat(fullPath); err == nil {
+					if _, err = os.Stat(fullPath); err == nil {
 						present++
 					}
 				}
@@ -119,11 +119,13 @@ func runDoctor(_ *cobra.Command, _ []string) error {
 
 		sort.Strings(paths)
 
+		var data []byte
+
 		for _, path := range paths {
 			storedSum := cfg.Checksums[path]
 			fullPath := filepath.Join(dir, path)
 
-			data, err := os.ReadFile(fullPath)
+			data, err = os.ReadFile(fullPath)
 			if err != nil {
 				continue
 			}

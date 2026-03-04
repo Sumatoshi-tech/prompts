@@ -1,3 +1,4 @@
+// Package adapters maps rendered templates to agent-specific file placements.
 package adapters
 
 import (

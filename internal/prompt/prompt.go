@@ -1,8 +1,10 @@
+// Package prompt implements interactive prompts for configuration setup.
 package prompt
 
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -11,19 +13,34 @@ import (
 
 // RunInitPrompts interactively gathers project configuration from the user.
 func RunInitPrompts(cfg *config.Config, defaultName string) (*config.Config, error) {
+	return gatherConfig(cfg, defaultName, os.Stdin, os.Stdout)
+}
+
+func gatherConfig(cfg *config.Config, defaultName string, in io.Reader, out io.Writer) (*config.Config, error) {
+	reader := bufio.NewReader(in)
+
+	askFn := func(prompt, defaultVal string) (string, error) {
+		return ask(reader, out, prompt, defaultVal)
+	}
+
+	askBoolFn := func(prompt string, defaultVal bool) (bool, error) {
+		return askBool(reader, out, prompt, defaultVal)
+	}
+
 	var err error
 
 	// Ecosystem selection.
-	fmt.Println("Available ecosystems:")
+	fmt.Fprintln(out, "Available ecosystems:")
 
 	for _, name := range config.ValidEcosystemNames() {
 		descs := config.EcosystemDescriptions()
-		fmt.Printf("  %-10s %s\n", name, descs[name])
+
+		fmt.Fprintf(out, "  %-10s %s\n", name, descs[name])
 	}
 
-	fmt.Println()
+	fmt.Fprintln(out)
 
-	ecoStr, err := ask("Ecosystem", cfg.Ecosystem)
+	ecoStr, err := askFn("Ecosystem", cfg.Ecosystem)
 	if err != nil {
 		return nil, err
 	}
@@ -32,50 +49,50 @@ func RunInitPrompts(cfg *config.Config, defaultName string) (*config.Config, err
 
 	mod := config.GetEcosystem(cfg.Ecosystem)
 
-	cfg.ProjectName, err = ask("Project name", defaultName)
+	cfg.ProjectName, err = askFn("Project name", defaultName)
 	if err != nil {
 		return nil, err
 	}
 
-	cfg.ModulePath, err = ask("Module path (e.g. github.com/user/project)", "")
+	cfg.ModulePath, err = askFn("Module path (e.g. github.com/user/project)", "")
 	if err != nil {
 		return nil, err
 	}
 
-	cfg.Description, err = ask("Project description", "")
+	cfg.Description, err = askFn("Project description", "")
 	if err != nil {
 		return nil, err
 	}
 
-	cfg.Expertise, err = ask("Agent domain expertise (e.g. distributed systems)", "")
+	cfg.Expertise, err = askFn("Agent domain expertise (e.g. distributed systems)", "")
 	if err != nil {
 		return nil, err
 	}
 
 	// Ecosystem-specific prompts (e.g. Go version, Rust edition, Zig version).
 	if mod != nil && mod.RunPrompts != nil {
-		if err := mod.RunPrompts(cfg, ask, askBool); err != nil {
-			return nil, err
+		if runErr := mod.RunPrompts(cfg, askFn, askBoolFn); runErr != nil {
+			return nil, runErr
 		}
 	}
 
 	// Workflow selection.
-	fmt.Println("\nAvailable workflows:")
+	fmt.Fprintln(out, "\nAvailable workflows:")
 
 	for _, name := range config.ValidWorkflowNames() {
-		fmt.Printf("  %-10s %s\n", name, config.WorkflowDescriptions[name])
+		fmt.Fprintf(out, "  %-10s %s\n", name, config.WorkflowDescriptions[name])
 	}
 
-	fmt.Println()
+	fmt.Fprintln(out)
 
-	wfStr, err := ask("Workflow", cfg.Workflow)
+	wfStr, err := askFn("Workflow", cfg.Workflow)
 	if err != nil {
 		return nil, err
 	}
 
 	cfg.Workflow = wfStr
 
-	binaryName, err := ask("Binary name", cfg.ProjectName)
+	binaryName, err := askFn("Binary name", cfg.ProjectName)
 	if err != nil {
 		return nil, err
 	}
@@ -93,29 +110,29 @@ func RunInitPrompts(cfg *config.Config, defaultName string) (*config.Config, err
 		cfg.AnalysisCmd = mod.DefaultAnalysisCmd
 	}
 
-	docker, err := askBool("Enable Docker support?", true)
+	docker, err := askBoolFn("Enable Docker support?", true)
 	if err != nil {
 		return nil, err
 	}
 
 	cfg.Features.Docker = docker
 
-	fmt.Println("\nAvailable AI agents:")
+	fmt.Fprintln(out, "\nAvailable AI agents:")
 
 	for _, name := range config.ValidAgentNames() {
-		fmt.Printf("  %-10s %s\n", name, config.AgentDescriptions[name])
+		fmt.Fprintf(out, "  %-10s %s\n", name, config.AgentDescriptions[name])
 	}
 
-	fmt.Println()
+	fmt.Fprintln(out)
 
-	agentsStr, err := ask("Target AI agents (comma-separated)", "claude")
+	agentsStr, err := askFn("Target AI agents (comma-separated)", "claude")
 	if err != nil {
 		return nil, err
 	}
 
 	cfg.Agents = parseAgents(agentsStr)
 
-	if err := cfg.Validate(); err != nil {
+	if err = cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid config: %w", err)
 	}
 
@@ -139,13 +156,11 @@ func parseAgents(input string) []string {
 	return agents
 }
 
-func ask(prompt, defaultVal string) (string, error) {
-	reader := bufio.NewReader(os.Stdin)
-
+func ask(reader *bufio.Reader, out io.Writer, prompt, defaultVal string) (string, error) {
 	if defaultVal != "" {
-		fmt.Printf("%s [%s]: ", prompt, defaultVal)
+		fmt.Fprintf(out, "%s [%s]: ", prompt, defaultVal)
 	} else {
-		fmt.Printf("%s: ", prompt)
+		fmt.Fprintf(out, "%s: ", prompt)
 	}
 
 	line, err := reader.ReadString('\n')
@@ -161,15 +176,13 @@ func ask(prompt, defaultVal string) (string, error) {
 	return line, nil
 }
 
-func askBool(prompt string, defaultVal bool) (bool, error) {
+func askBool(reader *bufio.Reader, out io.Writer, prompt string, defaultVal bool) (bool, error) {
 	defStr := "y/N"
 	if defaultVal {
 		defStr = "Y/n"
 	}
 
-	fmt.Printf("%s [%s]: ", prompt, defStr)
-
-	reader := bufio.NewReader(os.Stdin)
+	fmt.Fprintf(out, "%s [%s]: ", prompt, defStr)
 
 	line, err := reader.ReadString('\n')
 	if err != nil {

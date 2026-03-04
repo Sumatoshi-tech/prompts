@@ -1,3 +1,4 @@
+// Package cli implements the promptkit command-line interface.
 package cli
 
 import (

@@ -20,7 +20,7 @@ whether any files are out of date. Exits with code 0 if all files
 are current, or code 1 if there is drift.
 
 This is useful in CI to detect config drift without applying changes.`,
-	RunE: func(cmd *cobra.Command, _ []string) error {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		dir, err := resolveConfigDir()
 		if err != nil {
 			return err

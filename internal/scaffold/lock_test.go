@@ -11,6 +11,8 @@ import (
 )
 
 func TestAcquireLock_Success(t *testing.T) {
+	t.Parallel()
+
 	dir := t.TempDir()
 
 	if err := scaffold.AcquireLock(dir); err != nil {
@@ -37,6 +39,8 @@ func TestAcquireLock_Success(t *testing.T) {
 }
 
 func TestAcquireLock_Conflict(t *testing.T) {
+	t.Parallel()
+
 	dir := t.TempDir()
 
 	// Acquire the lock (our own PID — alive).
@@ -57,17 +61,19 @@ func TestAcquireLock_Conflict(t *testing.T) {
 }
 
 func TestAcquireLock_StaleLock(t *testing.T) {
+	t.Parallel()
+
 	dir := t.TempDir()
 	lockDir := filepath.Join(dir, ".promptkit")
 
-	if err := os.MkdirAll(lockDir, 0o755); err != nil {
+	if err := os.MkdirAll(lockDir, 0o750); err != nil {
 		t.Fatal(err)
 	}
 
 	// Write a lock with a PID that (almost certainly) doesn't exist.
 	// PID 2147483647 is the max PID on Linux and extremely unlikely to be in use.
 	stalePID := "2147483647"
-	if err := os.WriteFile(filepath.Join(lockDir, "lock"), []byte(stalePID+"\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(lockDir, "lock"), []byte(stalePID+"\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -90,6 +96,8 @@ func TestAcquireLock_StaleLock(t *testing.T) {
 }
 
 func TestReleaseLock_RemovesFile(t *testing.T) {
+	t.Parallel()
+
 	dir := t.TempDir()
 
 	if err := scaffold.AcquireLock(dir); err != nil {
@@ -105,6 +113,8 @@ func TestReleaseLock_RemovesFile(t *testing.T) {
 }
 
 func TestReleaseLock_NoopWhenMissing(t *testing.T) {
+	t.Parallel()
+
 	dir := t.TempDir()
 
 	// Should not panic or error when no lock exists.

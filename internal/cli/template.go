@@ -134,7 +134,7 @@ func runTemplateAdd(_ *cobra.Command, args []string) error {
 	overrideDir := ".promptkit/templates"
 	destPath := filepath.Join(overrideDir, name+".tmpl")
 
-	if err := os.MkdirAll(filepath.Dir(destPath), 0o755); err != nil {
+	if err = os.MkdirAll(filepath.Dir(destPath), 0o750); err != nil {
 		return fmt.Errorf("creating override directory: %w", err)
 	}
 
@@ -143,7 +143,7 @@ func runTemplateAdd(_ *cobra.Command, args []string) error {
 		return fmt.Errorf("reading source file: %w", err)
 	}
 
-	if err := os.WriteFile(destPath, data, 0o644); err != nil {
+	if err = os.WriteFile(destPath, data, 0o600); err != nil {
 		return fmt.Errorf("writing override: %w", err)
 	}
 
@@ -205,16 +205,16 @@ func runTemplateExtract(_ *cobra.Command, args []string) error {
 	destPath := filepath.Join(overrideDir, name+".tmpl")
 
 	if !extractFlags.force {
-		if _, err := os.Stat(destPath); err == nil {
+		if _, err = os.Stat(destPath); err == nil {
 			return fmt.Errorf("override already exists: %s (use --force to overwrite)", destPath)
 		}
 	}
 
-	if err := os.MkdirAll(filepath.Dir(destPath), 0o755); err != nil {
+	if err = os.MkdirAll(filepath.Dir(destPath), 0o750); err != nil {
 		return fmt.Errorf("creating override directory: %w", err)
 	}
 
-	if err := os.WriteFile(destPath, data, 0o644); err != nil {
+	if err = os.WriteFile(destPath, data, 0o600); err != nil {
 		return fmt.Errorf("writing extracted template: %w", err)
 	}
 

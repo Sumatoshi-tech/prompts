@@ -1,3 +1,4 @@
+// Package scaffold renders templates and manages generated file lifecycle.
 package scaffold
 
 import (
@@ -74,7 +75,9 @@ func Render(cfg *config.Config, tmplFS fs.FS) (map[string][]byte, error) {
 		if trimmed, ok := strings.CutSuffix(outPath, tmplSuffix); ok {
 			outPath = trimmed
 
-			rendered, err := renderTemplate(path, string(data), cfg)
+			var rendered []byte
+
+			rendered, err = renderTemplate(path, string(data), cfg)
 			if err != nil {
 				return fmt.Errorf("rendering %s: %w", path, err)
 			}
@@ -126,7 +129,9 @@ func RenderWithOverrides(cfg *config.Config, tmplFS fs.FS, overrideDir string) (
 
 			fullPath := filepath.Join(overrideDir, path)
 
-			rendered, err := renderTemplate(path, string(data), cfg)
+			var rendered []byte
+
+			rendered, err = renderTemplate(path, string(data), cfg)
 			if err != nil {
 				return nil, fmt.Errorf("rendering override %s (from %s): %w", outPath, fullPath, err)
 			}
@@ -171,7 +176,7 @@ func loadOverrides(dir string) (map[string][]byte, error) {
 // Files are written atomically using write-to-temp-then-rename.
 func Apply(rendered map[string][]byte, targetDir string, mode ApplyMode) error {
 	for relPath, content := range rendered {
-		outPath := filepath.Join(targetDir, relPath)
+		outPath := filepath.Clean(filepath.Join(targetDir, relPath))
 
 		if mode == ModeCreate {
 			if _, err := os.Stat(outPath); err == nil {
@@ -180,44 +185,54 @@ func Apply(rendered map[string][]byte, targetDir string, mode ApplyMode) error {
 		}
 
 		dir := filepath.Dir(outPath)
-		if err := os.MkdirAll(dir, 0o755); err != nil {
+		if err := os.MkdirAll(dir, 0o750); err != nil {
 			return fmt.Errorf("creating directory %s: %w", dir, err)
 		}
 
 		perm := filePermission(relPath)
 
-		// Atomic write: write to temp file in same directory, then rename.
-		tmpFile, err := os.CreateTemp(dir, ".promptkit-*.tmp")
-		if err != nil {
-			return fmt.Errorf("creating temp file for %s: %w", relPath, err)
+		if err := writeFileAtomic(outPath, content, perm, relPath); err != nil {
+			return err
 		}
+	}
 
-		tmpPath := tmpFile.Name()
+	return nil
+}
 
-		if _, err := tmpFile.Write(content); err != nil {
-			tmpFile.Close()
-			os.Remove(tmpPath)
+// writeFileAtomic writes content to outPath atomically via a temp file.
+// The temp file is created in the same directory to ensure rename works.
+func writeFileAtomic(outPath string, content []byte, perm os.FileMode, label string) error {
+	outPath = filepath.Clean(outPath)
+	tmpPath := outPath + ".promptkit.tmp"
 
-			return fmt.Errorf("writing temp file for %s: %w", relPath, err)
-		}
+	tmpFile, err := os.OpenFile(tmpPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
+	if err != nil {
+		return fmt.Errorf("creating temp file for %s: %w", label, err)
+	}
 
-		if err := tmpFile.Close(); err != nil {
-			os.Remove(tmpPath)
+	if _, err = tmpFile.Write(content); err != nil {
+		tmpFile.Close()
+		os.Remove(tmpPath)
 
-			return fmt.Errorf("closing temp file for %s: %w", relPath, err)
-		}
+		return fmt.Errorf("writing temp file for %s: %w", label, err)
+	}
 
-		if err := os.Chmod(tmpPath, perm); err != nil {
-			os.Remove(tmpPath)
+	if err = tmpFile.Close(); err != nil {
+		os.Remove(tmpPath)
 
-			return fmt.Errorf("setting permissions for %s: %w", relPath, err)
-		}
+		return fmt.Errorf("closing temp file for %s: %w", label, err)
+	}
 
-		if err := os.Rename(tmpPath, outPath); err != nil {
-			os.Remove(tmpPath)
+	if err = os.Chmod(tmpPath, perm); err != nil {
+		os.Remove(tmpPath)
 
-			return fmt.Errorf("renaming temp file for %s: %w", relPath, err)
-		}
+		return fmt.Errorf("setting permissions for %s: %w", label, err)
+	}
+
+	if err = os.Rename(tmpPath, outPath); err != nil {
+		os.Remove(tmpPath)
+
+		return fmt.Errorf("renaming temp file for %s: %w", label, err)
 	}
 
 	return nil
@@ -243,11 +258,11 @@ func BackupFiles(targetDir string, paths []string) (string, error) {
 
 		destPath := filepath.Join(backupDir, relPath)
 
-		if err := os.MkdirAll(filepath.Dir(destPath), 0o755); err != nil {
+		if err = os.MkdirAll(filepath.Dir(destPath), 0o750); err != nil {
 			return "", fmt.Errorf("creating backup directory: %w", err)
 		}
 
-		if err := os.WriteFile(destPath, data, 0o644); err != nil {
+		if err = os.WriteFile(destPath, data, 0o600); err != nil {
 			return "", fmt.Errorf("backing up %s: %w", relPath, err)
 		}
 
@@ -280,11 +295,11 @@ func RestoreBackup(backupDir, targetDir string) error {
 
 		destPath := filepath.Join(targetDir, relPath)
 
-		if err := os.MkdirAll(filepath.Dir(destPath), 0o755); err != nil {
+		if err = os.MkdirAll(filepath.Dir(destPath), 0o750); err != nil {
 			return fmt.Errorf("creating directory for restore: %w", err)
 		}
 
-		if err := os.WriteFile(destPath, data, 0o644); err != nil {
+		if err = os.WriteFile(destPath, data, 0o600); err != nil {
 			return fmt.Errorf("restoring %s: %w", relPath, err)
 		}
 
@@ -396,7 +411,9 @@ func RenderSingle(cfg *config.Config, tmplFS fs.FS, overrideDir, name string) ([
 	if overrideDir != "" {
 		overridePath := filepath.Join(overrideDir, name+tmplSuffix)
 		if data, err := os.ReadFile(overridePath); err == nil {
-			rendered, err := renderTemplate(overridePath, string(data), cfg)
+			var rendered []byte
+
+			rendered, err = renderTemplate(overridePath, string(data), cfg)
 			if err != nil {
 				return nil, fmt.Errorf("rendering override %s (from %s): %w", name, overridePath, err)
 			}
@@ -844,8 +861,8 @@ func SaveOverrideChecksum(overrideDir, name string, embeddedContent []byte) {
 		return
 	}
 
-	_ = os.MkdirAll(filepath.Dir(checksumPath), 0o755)
-	_ = os.WriteFile(checksumPath, data, 0o644)
+	_ = os.MkdirAll(filepath.Dir(checksumPath), 0o750)
+	_ = os.WriteFile(checksumPath, data, 0o600)
 }
 
 // CheckOverrideStaleness returns override file names whose upstream embedded
@@ -900,7 +917,7 @@ func loadOverrideChecksums(path string) map[string]string {
 	}
 
 	var checksums map[string]string
-	if err := json.Unmarshal(data, &checksums); err != nil {
+	if err = json.Unmarshal(data, &checksums); err != nil {
 		return make(map[string]string)
 	}
 

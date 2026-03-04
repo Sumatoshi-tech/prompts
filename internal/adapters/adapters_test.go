@@ -9,6 +9,8 @@ import (
 )
 
 func TestPlaceForAgents_Claude(t *testing.T) {
+	t.Parallel()
+
 	rendered := testRendered()
 
 	files, err := adapters.PlaceForAgents(rendered, []string{config.AgentClaude}, config.WorkflowFRD)
@@ -32,6 +34,8 @@ func TestPlaceForAgents_Claude(t *testing.T) {
 }
 
 func TestPlaceForAgents_SkillMDHasFrontmatter(t *testing.T) {
+	t.Parallel()
+
 	rendered := testRendered()
 
 	files, err := adapters.PlaceForAgents(rendered, []string{config.AgentClaude}, config.WorkflowFRD)
@@ -60,6 +64,8 @@ func TestPlaceForAgents_SkillMDHasFrontmatter(t *testing.T) {
 }
 
 func TestPlaceForAgents_Codex(t *testing.T) {
+	t.Parallel()
+
 	rendered := testRendered()
 
 	files, err := adapters.PlaceForAgents(rendered, []string{config.AgentCodex}, config.WorkflowFRD)
@@ -75,6 +81,8 @@ func TestPlaceForAgents_Codex(t *testing.T) {
 }
 
 func TestPlaceForAgents_Copilot(t *testing.T) {
+	t.Parallel()
+
 	rendered := testRendered()
 
 	files, err := adapters.PlaceForAgents(rendered, []string{config.AgentCopilot}, config.WorkflowFRD)
@@ -90,6 +98,8 @@ func TestPlaceForAgents_Copilot(t *testing.T) {
 }
 
 func TestPlaceForAgents_Cursor(t *testing.T) {
+	t.Parallel()
+
 	rendered := testRendered()
 
 	files, err := adapters.PlaceForAgents(rendered, []string{config.AgentCursor}, config.WorkflowFRD)
@@ -119,6 +129,8 @@ func TestPlaceForAgents_Cursor(t *testing.T) {
 }
 
 func TestPlaceForAgents_Gemini(t *testing.T) {
+	t.Parallel()
+
 	rendered := testRendered()
 
 	files, err := adapters.PlaceForAgents(rendered, []string{config.AgentGemini}, config.WorkflowFRD)
@@ -151,6 +163,8 @@ func TestPlaceForAgents_Gemini(t *testing.T) {
 }
 
 func TestPlaceForAgents_Windsurf(t *testing.T) {
+	t.Parallel()
+
 	rendered := testRendered()
 
 	files, err := adapters.PlaceForAgents(rendered, []string{config.AgentWindsurf}, config.WorkflowFRD)
@@ -167,6 +181,8 @@ func TestPlaceForAgents_Windsurf(t *testing.T) {
 }
 
 func TestPlaceForAgents_MultipleAgents(t *testing.T) {
+	t.Parallel()
+
 	rendered := testRendered()
 
 	agents := []string{config.AgentClaude, config.AgentGemini, config.AgentCursor}
@@ -193,6 +209,8 @@ func TestPlaceForAgents_MultipleAgents(t *testing.T) {
 }
 
 func TestPlaceForAgents_UnknownAgent(t *testing.T) {
+	t.Parallel()
+
 	rendered := testRendered()
 
 	_, err := adapters.PlaceForAgents(rendered, []string{"unknown"}, config.WorkflowFRD)
@@ -202,6 +220,8 @@ func TestPlaceForAgents_UnknownAgent(t *testing.T) {
 }
 
 func TestRemoveInstructionPaths(t *testing.T) {
+	t.Parallel()
+
 	paths := adapters.RemoveInstructionPaths()
 
 	if len(paths) == 0 {
@@ -245,6 +265,8 @@ func assertContainsPath(t *testing.T, paths map[string]bool, expected string) {
 }
 
 func TestFileOwnership_SingleAgent(t *testing.T) {
+	t.Parallel()
+
 	rendered := testRendered()
 
 	ownership, err := adapters.FileOwnership(rendered, []string{config.AgentClaude}, config.WorkflowFRD)
@@ -268,6 +290,8 @@ func TestFileOwnership_SingleAgent(t *testing.T) {
 }
 
 func TestFileOwnership_MultipleAgents(t *testing.T) {
+	t.Parallel()
+
 	rendered := testRendered()
 	agents := []string{config.AgentClaude, config.AgentCursor}
 
@@ -288,6 +312,8 @@ func TestFileOwnership_MultipleAgents(t *testing.T) {
 }
 
 func TestFileOwnership_SharedVsSpecific(t *testing.T) {
+	t.Parallel()
+
 	rendered := testRendered()
 	agents := []string{config.AgentClaude, config.AgentGemini}
 
@@ -318,6 +344,8 @@ func TestFileOwnership_SharedVsSpecific(t *testing.T) {
 }
 
 func TestPlaceForAgents_JourneyWorkflow(t *testing.T) {
+	t.Parallel()
+
 	rendered := testRenderedJourney()
 
 	files, err := adapters.PlaceForAgents(rendered, []string{config.AgentClaude}, config.WorkflowJourney)
@@ -345,6 +373,8 @@ func TestPlaceForAgents_JourneyWorkflow(t *testing.T) {
 }
 
 func TestRemoveInstructionPaths_IncludesAllWorkflows(t *testing.T) {
+	t.Parallel()
+
 	paths := adapters.RemoveInstructionPaths()
 	pathSet := make(map[string]bool)
 
@@ -383,6 +413,8 @@ func testRenderedJourney() map[string][]byte {
 // .toml, .mdc, workflows). The raw instruction body should appear in every
 // agent's output regardless of wrapper format.
 func TestSkillContent_SemanticEquivalence(t *testing.T) {
+	t.Parallel()
+
 	rendered := testRendered()
 	allAgents := []string{
 		config.AgentClaude,

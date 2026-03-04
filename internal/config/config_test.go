@@ -9,6 +9,8 @@ import (
 )
 
 func TestDefault(t *testing.T) {
+	t.Parallel()
+
 	cfg := config.Default()
 
 	if cfg.GoVersion == "" {
@@ -29,6 +31,8 @@ func TestDefault(t *testing.T) {
 }
 
 func TestValidate_Valid(t *testing.T) {
+	t.Parallel()
+
 	cfg := config.Default()
 	cfg.ProjectName = "testproject"
 	cfg.ModulePath = "github.com/user/testproject"
@@ -42,6 +46,8 @@ func TestValidate_Valid(t *testing.T) {
 }
 
 func TestValidate_MissingFields(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name    string
 		modify  func(*config.Config)
@@ -95,6 +101,8 @@ func TestValidate_MissingFields(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			cfg := validConfig()
 			tt.modify(cfg)
 
@@ -111,6 +119,8 @@ func TestValidate_MissingFields(t *testing.T) {
 }
 
 func TestSaveAndLoad(t *testing.T) {
+	t.Parallel()
+
 	dir := t.TempDir()
 
 	original := validConfig()
@@ -152,6 +162,8 @@ func TestSaveAndLoad(t *testing.T) {
 }
 
 func TestLoad_NotFound(t *testing.T) {
+	t.Parallel()
+
 	dir := t.TempDir()
 
 	_, err := config.Load(dir)
@@ -161,10 +173,12 @@ func TestLoad_NotFound(t *testing.T) {
 }
 
 func TestLoad_InvalidYAML(t *testing.T) {
+	t.Parallel()
+
 	dir := t.TempDir()
 	path := filepath.Join(dir, config.FileName)
 
-	if err := os.WriteFile(path, []byte(":::invalid:::"), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte(":::invalid:::"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -175,6 +189,8 @@ func TestLoad_InvalidYAML(t *testing.T) {
 }
 
 func TestValidate_InvalidAgentName(t *testing.T) {
+	t.Parallel()
+
 	cfg := validConfig()
 	cfg.Agents = []string{"claude", "invalid-agent"}
 
@@ -194,6 +210,8 @@ func TestValidate_InvalidAgentName(t *testing.T) {
 }
 
 func TestValidate_AllValidAgents(t *testing.T) {
+	t.Parallel()
+
 	cfg := validConfig()
 	cfg.Agents = config.ValidAgentNames()
 
@@ -203,6 +221,8 @@ func TestValidate_AllValidAgents(t *testing.T) {
 }
 
 func TestValidate_CoverageCritical(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
 		critical int
@@ -215,6 +235,8 @@ func TestValidate_CoverageCritical(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			cfg := validConfig()
 			cfg.Quality.CoverageCritical = tt.critical
 
@@ -239,6 +261,8 @@ func TestValidate_CoverageCritical(t *testing.T) {
 }
 
 func TestValidate_CoverageCriticalLessThanMin(t *testing.T) {
+	t.Parallel()
+
 	cfg := validConfig()
 	cfg.Quality.CoverageMin = 90
 	cfg.Quality.CoverageCritical = 80
@@ -254,6 +278,8 @@ func TestValidate_CoverageCriticalLessThanMin(t *testing.T) {
 }
 
 func TestValidate_LineLength(t *testing.T) {
+	t.Parallel()
+
 	cfg := validConfig()
 	cfg.Quality.LineLength = 0
 
@@ -268,6 +294,8 @@ func TestValidate_LineLength(t *testing.T) {
 }
 
 func TestValidate_AggregatesMultipleErrors(t *testing.T) {
+	t.Parallel()
+
 	cfg := validConfig()
 	cfg.ProjectName = ""
 	cfg.ModulePath = ""
@@ -293,6 +321,8 @@ func TestValidate_AggregatesMultipleErrors(t *testing.T) {
 }
 
 func TestValidate_ErrorSuggestions(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name       string
 		modify     func(*config.Config)
@@ -322,6 +352,8 @@ func TestValidate_ErrorSuggestions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			cfg := validConfig()
 			tt.modify(cfg)
 
@@ -338,6 +370,8 @@ func TestValidate_ErrorSuggestions(t *testing.T) {
 }
 
 func TestValidAgentNames(t *testing.T) {
+	t.Parallel()
+
 	names := config.ValidAgentNames()
 	if len(names) != 6 {
 		t.Errorf("expected 6 valid agents, got %d", len(names))
@@ -353,6 +387,8 @@ func TestValidAgentNames(t *testing.T) {
 }
 
 func TestMarshalCommented_ContainsComments(t *testing.T) {
+	t.Parallel()
+
 	cfg := validConfig()
 	data := config.MarshalCommented(cfg)
 	s := string(data)
@@ -374,6 +410,8 @@ func TestMarshalCommented_ContainsComments(t *testing.T) {
 }
 
 func TestMarshalCommented_RoundTrip(t *testing.T) {
+	t.Parallel()
+
 	dir := t.TempDir()
 
 	original := validConfig()
@@ -403,6 +441,8 @@ func TestMarshalCommented_RoundTrip(t *testing.T) {
 }
 
 func TestLoad_MergeConflictMarkers(t *testing.T) {
+	t.Parallel()
+
 	dir := t.TempDir()
 	path := filepath.Join(dir, config.FileName)
 
@@ -415,7 +455,7 @@ quality:
   coverage_min: 90
 >>>>>>> feature-branch
 `
-	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -430,6 +470,8 @@ quality:
 }
 
 func TestDefault_AnalysisCmd(t *testing.T) {
+	t.Parallel()
+
 	cfg := config.Default()
 
 	if cfg.AnalysisCmd != "go vet ./..." {
@@ -438,6 +480,8 @@ func TestDefault_AnalysisCmd(t *testing.T) {
 }
 
 func TestMarshalCommented_MergeConflictTip(t *testing.T) {
+	t.Parallel()
+
 	cfg := validConfig()
 	data := config.MarshalCommented(cfg)
 	s := string(data)
@@ -448,6 +492,8 @@ func TestMarshalCommented_MergeConflictTip(t *testing.T) {
 }
 
 func TestDefault_Version(t *testing.T) {
+	t.Parallel()
+
 	cfg := config.Default()
 
 	if cfg.Version != config.CurrentVersion {
@@ -456,10 +502,12 @@ func TestDefault_Version(t *testing.T) {
 }
 
 func TestFindConfig_CurrentDir(t *testing.T) {
+	t.Parallel()
+
 	dir := t.TempDir()
 	path := filepath.Join(dir, config.FileName)
 
-	if err := os.WriteFile(path, []byte("project_name: test\n"), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte("project_name: test\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -474,15 +522,17 @@ func TestFindConfig_CurrentDir(t *testing.T) {
 }
 
 func TestFindConfig_ParentDir(t *testing.T) {
+	t.Parallel()
+
 	parent := t.TempDir()
 	child := filepath.Join(parent, "sub", "deep")
 
-	if err := os.MkdirAll(child, 0o755); err != nil {
+	if err := os.MkdirAll(child, 0o750); err != nil {
 		t.Fatal(err)
 	}
 
 	path := filepath.Join(parent, config.FileName)
-	if err := os.WriteFile(path, []byte("project_name: test\n"), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte("project_name: test\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -497,6 +547,8 @@ func TestFindConfig_ParentDir(t *testing.T) {
 }
 
 func TestFindConfig_NotFound(t *testing.T) {
+	t.Parallel()
+
 	dir := t.TempDir()
 
 	_, err := config.FindConfig(dir)
@@ -510,6 +562,8 @@ func TestFindConfig_NotFound(t *testing.T) {
 }
 
 func TestMarshalCommented_Version(t *testing.T) {
+	t.Parallel()
+
 	cfg := validConfig()
 	data := config.MarshalCommented(cfg)
 	s := string(data)
@@ -524,6 +578,8 @@ func TestMarshalCommented_Version(t *testing.T) {
 }
 
 func TestFieldFiles_AllKeysHaveDescriptions(t *testing.T) {
+	t.Parallel()
+
 	for key := range config.AllFieldFiles() {
 		_, desc, ok := config.ExplainField(key)
 		if !ok {
@@ -537,6 +593,8 @@ func TestFieldFiles_AllKeysHaveDescriptions(t *testing.T) {
 }
 
 func TestReverseFieldMap(t *testing.T) {
+	t.Parallel()
+
 	rev := config.ReverseFieldMap()
 
 	// AGENTS.md should have multiple keys.
@@ -559,6 +617,8 @@ func TestReverseFieldMap(t *testing.T) {
 }
 
 func TestMigrate_V0ToV1(t *testing.T) {
+	t.Parallel()
+
 	cfg := &config.Config{
 		Version:     0,
 		AnalysisCmd: "",
@@ -579,6 +639,8 @@ func TestMigrate_V0ToV1(t *testing.T) {
 }
 
 func TestMigrate_AlreadyCurrent(t *testing.T) {
+	t.Parallel()
+
 	cfg := validConfig()
 	changes := config.Migrate(cfg)
 
@@ -588,6 +650,8 @@ func TestMigrate_AlreadyCurrent(t *testing.T) {
 }
 
 func TestValidate_EmptyAgentsList(t *testing.T) {
+	t.Parallel()
+
 	cfg := validConfig()
 	cfg.Agents = []string{}
 
@@ -606,6 +670,8 @@ func TestValidate_EmptyAgentsList(t *testing.T) {
 }
 
 func TestValidate_DidYouMean(t *testing.T) {
+	t.Parallel()
+
 	cfg := validConfig()
 	cfg.Agents = []string{"cluade"} // typo for "claude".
 
@@ -620,6 +686,8 @@ func TestValidate_DidYouMean(t *testing.T) {
 }
 
 func TestValidate_DidYouMean_NoSuggestion(t *testing.T) {
+	t.Parallel()
+
 	cfg := validConfig()
 	cfg.Agents = []string{"zzzzzzz"} // too distant from any agent.
 
@@ -635,6 +703,8 @@ func TestValidate_DidYouMean_NoSuggestion(t *testing.T) {
 }
 
 func TestLoad_UnknownFieldError(t *testing.T) {
+	t.Parallel()
+
 	dir := t.TempDir()
 	path := filepath.Join(dir, config.FileName)
 
@@ -643,7 +713,7 @@ module_path: github.com/test/myapp
 agnets:
   - claude
 `
-	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -658,6 +728,8 @@ agnets:
 }
 
 func TestValidEcosystemNames(t *testing.T) {
+	t.Parallel()
+
 	names := config.ValidEcosystemNames()
 	if len(names) != 3 {
 		t.Errorf("expected 3 valid ecosystems, got %d", len(names))
@@ -681,6 +753,8 @@ func TestValidEcosystemNames(t *testing.T) {
 }
 
 func TestValidate_ValidEcosystems(t *testing.T) {
+	t.Parallel()
+
 	configs := map[string]*config.Config{
 		"golang": validConfig(),
 		"rust":   validRustConfig(),
@@ -689,6 +763,8 @@ func TestValidate_ValidEcosystems(t *testing.T) {
 
 	for _, eco := range config.ValidEcosystemNames() {
 		t.Run(eco, func(t *testing.T) {
+			t.Parallel()
+
 			cfg := configs[eco]
 			if err := cfg.Validate(); err != nil {
 				t.Errorf("ecosystem %q should be valid: %v", eco, err)
@@ -698,6 +774,8 @@ func TestValidate_ValidEcosystems(t *testing.T) {
 }
 
 func TestValidate_InvalidEcosystem(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name      string
 		ecosystem string
@@ -751,6 +829,8 @@ func TestValidate_InvalidEcosystem(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			cfg := validConfig()
 			cfg.Ecosystem = tt.ecosystem
 
@@ -784,6 +864,8 @@ func TestValidate_InvalidEcosystem(t *testing.T) {
 }
 
 func TestEcosystemDescriptions_AllEcosystemsCovered(t *testing.T) {
+	t.Parallel()
+
 	for _, name := range config.ValidEcosystemNames() {
 		desc, ok := config.EcosystemDescriptions()[name]
 		if !ok {
@@ -798,6 +880,8 @@ func TestEcosystemDescriptions_AllEcosystemsCovered(t *testing.T) {
 }
 
 func TestEcosystemConstants(t *testing.T) {
+	t.Parallel()
+
 	if config.EcosystemGolang != "golang" {
 		t.Errorf("EcosystemGolang = %q, want %q", config.EcosystemGolang, "golang")
 	}
@@ -812,7 +896,11 @@ func TestEcosystemConstants(t *testing.T) {
 }
 
 func TestValidate_RustEcosystem(t *testing.T) {
+	t.Parallel()
+
 	t.Run("valid rust config", func(t *testing.T) {
+		t.Parallel()
+
 		cfg := validRustConfig()
 		if err := cfg.Validate(); err != nil {
 			t.Errorf("unexpected validation error: %v", err)
@@ -820,6 +908,8 @@ func TestValidate_RustEcosystem(t *testing.T) {
 	})
 
 	t.Run("missing rust_edition", func(t *testing.T) {
+		t.Parallel()
+
 		cfg := validRustConfig()
 		cfg.RustEdition = ""
 
@@ -834,6 +924,8 @@ func TestValidate_RustEcosystem(t *testing.T) {
 	})
 
 	t.Run("go_version not required for rust", func(t *testing.T) {
+		t.Parallel()
+
 		cfg := validRustConfig()
 		cfg.GoVersion = ""
 
@@ -843,6 +935,8 @@ func TestValidate_RustEcosystem(t *testing.T) {
 	})
 
 	t.Run("invalid unsafe_policy", func(t *testing.T) {
+		t.Parallel()
+
 		cfg := validRustConfig()
 		cfg.UnsafePolicy = "yolo"
 
@@ -861,6 +955,8 @@ func TestValidate_RustEcosystem(t *testing.T) {
 	})
 
 	t.Run("valid unsafe policies", func(t *testing.T) {
+		t.Parallel()
+
 		for _, policy := range []string{"allow", "deny", "forbid", "warn"} {
 			cfg := validRustConfig()
 			cfg.UnsafePolicy = policy
@@ -872,6 +968,8 @@ func TestValidate_RustEcosystem(t *testing.T) {
 	})
 
 	t.Run("empty unsafe_policy allowed", func(t *testing.T) {
+		t.Parallel()
+
 		cfg := validRustConfig()
 		cfg.UnsafePolicy = ""
 
@@ -882,7 +980,11 @@ func TestValidate_RustEcosystem(t *testing.T) {
 }
 
 func TestValidate_ZigEcosystem(t *testing.T) {
+	t.Parallel()
+
 	t.Run("valid zig config", func(t *testing.T) {
+		t.Parallel()
+
 		cfg := validZigConfig()
 		if err := cfg.Validate(); err != nil {
 			t.Errorf("unexpected validation error: %v", err)
@@ -890,6 +992,8 @@ func TestValidate_ZigEcosystem(t *testing.T) {
 	})
 
 	t.Run("go_version not required for zig", func(t *testing.T) {
+		t.Parallel()
+
 		cfg := validZigConfig()
 		cfg.GoVersion = ""
 
@@ -899,6 +1003,8 @@ func TestValidate_ZigEcosystem(t *testing.T) {
 	})
 
 	t.Run("link_libc true", func(t *testing.T) {
+		t.Parallel()
+
 		cfg := validZigConfig()
 		cfg.LinkLibc = true
 
@@ -909,6 +1015,8 @@ func TestValidate_ZigEcosystem(t *testing.T) {
 }
 
 func TestWorkflowConstants(t *testing.T) {
+	t.Parallel()
+
 	if config.WorkflowFRD != "frd" {
 		t.Errorf("WorkflowFRD = %q, want %q", config.WorkflowFRD, "frd")
 	}
@@ -919,6 +1027,8 @@ func TestWorkflowConstants(t *testing.T) {
 }
 
 func TestValidWorkflowNames(t *testing.T) {
+	t.Parallel()
+
 	names := config.ValidWorkflowNames()
 	if len(names) != 2 {
 		t.Fatalf("expected 2 workflows, got %d", len(names))
@@ -930,6 +1040,8 @@ func TestValidWorkflowNames(t *testing.T) {
 }
 
 func TestValidate_InvalidWorkflow(t *testing.T) {
+	t.Parallel()
+
 	cfg := validConfig()
 	cfg.Workflow = "waterfall"
 
@@ -948,6 +1060,8 @@ func TestValidate_InvalidWorkflow(t *testing.T) {
 }
 
 func TestValidate_ValidWorkflows(t *testing.T) {
+	t.Parallel()
+
 	for _, wf := range []string{"frd", "journey"} {
 		cfg := validConfig()
 		cfg.Workflow = wf
@@ -959,6 +1073,8 @@ func TestValidate_ValidWorkflows(t *testing.T) {
 }
 
 func TestValidate_DefaultWorkflowIsFRD(t *testing.T) {
+	t.Parallel()
+
 	cfg := config.Default()
 	if cfg.Workflow != config.WorkflowFRD {
 		t.Errorf("Default().Workflow = %q, want %q", cfg.Workflow, config.WorkflowFRD)
@@ -966,6 +1082,8 @@ func TestValidate_DefaultWorkflowIsFRD(t *testing.T) {
 }
 
 func TestMarshalCommented_Workflow(t *testing.T) {
+	t.Parallel()
+
 	cfg := validConfig()
 	cfg.Workflow = config.WorkflowJourney
 	data := config.MarshalCommented(cfg)
@@ -981,6 +1099,8 @@ func TestMarshalCommented_Workflow(t *testing.T) {
 }
 
 func TestAgentDescriptions_AllAgentsCovered(t *testing.T) {
+	t.Parallel()
+
 	for _, name := range config.ValidAgentNames() {
 		desc, ok := config.AgentDescriptions[name]
 		if !ok {
@@ -992,6 +1112,399 @@ func TestAgentDescriptions_AllAgentsCovered(t *testing.T) {
 			t.Errorf("empty description for agent %q", name)
 		}
 	}
+}
+
+func TestMarshalCommented_GolangConfig(t *testing.T) {
+	t.Parallel()
+
+	cfg := validConfig()
+	cfg.GoVersion = "1.22"
+	data := config.MarshalCommented(cfg)
+	s := string(data)
+
+	// Verify golang-specific commented field appears.
+	if !contains(s, "go_version") {
+		t.Error("MarshalCommented for golang should contain go_version")
+	}
+
+	if !contains(s, `"1.22"`) {
+		t.Error("MarshalCommented for golang should quote go_version value")
+	}
+
+	// Verify the output can be decoded back as valid YAML.
+	dir := t.TempDir()
+	if err := config.Save(cfg, dir); err != nil {
+		t.Fatalf("Save() error: %v", err)
+	}
+
+	loaded, err := config.Load(dir)
+	if err != nil {
+		t.Fatalf("Load() round-trip error: %v", err)
+	}
+
+	if loaded.GoVersion != "1.22" {
+		t.Errorf("round-trip GoVersion = %q, want %q", loaded.GoVersion, "1.22")
+	}
+}
+
+func TestMarshalCommented_RustConfig(t *testing.T) {
+	t.Parallel()
+
+	cfg := validRustConfig()
+	data := config.MarshalCommented(cfg)
+	s := string(data)
+
+	// Verify rust-specific commented fields appear.
+	if !contains(s, "rust_edition") {
+		t.Error("MarshalCommented for rust should contain rust_edition")
+	}
+
+	if !contains(s, `"2021"`) {
+		t.Error("MarshalCommented for rust should quote rust_edition value")
+	}
+
+	if !contains(s, "unsafe_policy") {
+		t.Error("MarshalCommented for rust should contain unsafe_policy")
+	}
+
+	if !contains(s, "unsafe_policy: deny") {
+		t.Error("MarshalCommented for rust should contain unsafe_policy: deny (unquoted)")
+	}
+
+	// Verify round-trip.
+	dir := t.TempDir()
+	if err := config.Save(cfg, dir); err != nil {
+		t.Fatalf("Save() error: %v", err)
+	}
+
+	loaded, err := config.Load(dir)
+	if err != nil {
+		t.Fatalf("Load() round-trip error: %v", err)
+	}
+
+	if loaded.RustEdition != "2021" {
+		t.Errorf("round-trip RustEdition = %q, want %q", loaded.RustEdition, "2021")
+	}
+
+	if loaded.UnsafePolicy != "deny" {
+		t.Errorf("round-trip UnsafePolicy = %q, want %q", loaded.UnsafePolicy, "deny")
+	}
+}
+
+func TestMarshalCommented_ZigConfig(t *testing.T) {
+	t.Parallel()
+
+	cfg := validZigConfig()
+	cfg.LinkLibc = true
+	data := config.MarshalCommented(cfg)
+	s := string(data)
+
+	// Verify zig-specific commented fields appear.
+	if !contains(s, "zig_version") {
+		t.Error("MarshalCommented for zig should contain zig_version")
+	}
+
+	if !contains(s, `"0.13"`) {
+		t.Error("MarshalCommented for zig should quote zig_version value")
+	}
+
+	if !contains(s, "link_libc: true") {
+		t.Error("MarshalCommented for zig should contain link_libc: true")
+	}
+
+	// Verify round-trip.
+	dir := t.TempDir()
+	if err := config.Save(cfg, dir); err != nil {
+		t.Fatalf("Save() error: %v", err)
+	}
+
+	loaded, err := config.Load(dir)
+	if err != nil {
+		t.Fatalf("Load() round-trip error: %v", err)
+	}
+
+	if loaded.ZigVersion != "0.13" {
+		t.Errorf("round-trip ZigVersion = %q, want %q", loaded.ZigVersion, "0.13")
+	}
+
+	if !loaded.LinkLibc {
+		t.Error("round-trip LinkLibc = false, want true")
+	}
+}
+
+func TestMarshalCommented_CGOLibs(t *testing.T) {
+	t.Parallel()
+
+	cfg := validConfig()
+	cfg.Features.CGO = true
+	cfg.Features.CGOLibs = []config.CGOLib{
+		{
+			Name:      "sqlite3",
+			PkgConfig: "sqlite3",
+			Include:   "/usr/include",
+			LibDir:    "/usr/lib",
+		},
+	}
+
+	data := config.MarshalCommented(cfg)
+	s := string(data)
+
+	if !contains(s, "cgo_libs:") {
+		t.Error("MarshalCommented should contain cgo_libs section")
+	}
+
+	if !contains(s, "name: sqlite3") {
+		t.Error("MarshalCommented should contain CGO lib name")
+	}
+
+	if !contains(s, "pkg_config: sqlite3") {
+		t.Error("MarshalCommented should contain CGO lib pkg_config")
+	}
+
+	if !contains(s, "include: /usr/include") {
+		t.Error("MarshalCommented should contain CGO lib include")
+	}
+
+	if !contains(s, "lib_dir: /usr/lib") {
+		t.Error("MarshalCommented should contain CGO lib lib_dir")
+	}
+}
+
+func TestMarshalCommented_Checksums(t *testing.T) {
+	t.Parallel()
+
+	cfg := validConfig()
+	cfg.Checksums = map[string]string{
+		"AGENTS.md": "abc123",
+		"Makefile":  "def456",
+	}
+
+	data := config.MarshalCommented(cfg)
+	s := string(data)
+
+	if !contains(s, "checksums:") {
+		t.Error("MarshalCommented should contain checksums section")
+	}
+
+	if !contains(s, "AGENTS.md: abc123") {
+		t.Error("MarshalCommented should contain AGENTS.md checksum")
+	}
+
+	if !contains(s, "Makefile: def456") {
+		t.Error("MarshalCommented should contain Makefile checksum")
+	}
+
+	// Verify checksums are sorted by key.
+	agentsIdx := 0
+	makefileIdx := 0
+
+	for i, line := range splitLines(s) {
+		if contains(line, "AGENTS.md: abc123") {
+			agentsIdx = i
+		}
+
+		if contains(line, "Makefile: def456") {
+			makefileIdx = i
+		}
+	}
+
+	if agentsIdx >= makefileIdx {
+		t.Error("checksums should be sorted: AGENTS.md before Makefile")
+	}
+}
+
+func TestQuoteVersion(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name:  "empty string returns empty quotes",
+			input: "",
+			want:  `""`,
+		},
+		{
+			name:  "version string is quoted",
+			input: "1.21",
+			want:  `"1.21"`,
+		},
+		{
+			name:  "rust edition is quoted",
+			input: "2021",
+			want:  `"2021"`,
+		},
+		{
+			name:  "zig version is quoted",
+			input: "0.13",
+			want:  `"0.13"`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Test quoteVersion indirectly via MarshalCommented.
+			// quoteVersion is unexported, so we verify its behavior through
+			// the commented YAML output for ecosystem fields that use Quote: true.
+			cfg := validConfig()
+			cfg.GoVersion = tt.input
+
+			data := config.MarshalCommented(cfg)
+			s := string(data)
+
+			if tt.input == "" {
+				// When GoVersion is empty, quoteVersion returns "" which renders as: go_version: "".
+				if !contains(s, `go_version: ""`) {
+					t.Errorf("MarshalCommented should contain go_version: \"\" for empty version, got:\n%s", s)
+				}
+			} else {
+				expected := "go_version: " + tt.want
+				if !contains(s, expected) {
+					t.Errorf("MarshalCommented should contain %q, got:\n%s", expected, s)
+				}
+			}
+		})
+	}
+}
+
+func TestClosestWorkflow(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name:  "exact match frd",
+			input: "frd",
+			want:  "frd",
+		},
+		{
+			name:  "exact match journey",
+			input: "journey",
+			want:  "journey",
+		},
+		{
+			name:  "typo fRd",
+			input: "fRd",
+			want:  "frd",
+		},
+		{
+			name:  "typo journy",
+			input: "journy",
+			want:  "journey",
+		},
+		{
+			name:  "typo journe",
+			input: "journe",
+			want:  "journey",
+		},
+		{
+			name:  "completely wrong returns empty",
+			input: "zzzzzzzzz",
+			want:  "",
+		},
+		{
+			name:  "empty string",
+			input: "",
+			want:  "frd",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			// closestWorkflow is unexported, so we test it indirectly through Validate.
+			cfg := validConfig()
+			cfg.Workflow = tt.input
+
+			err := cfg.Validate()
+			if tt.want == tt.input {
+				// Exact match should not produce a workflow error.
+				if err != nil && contains(err.Error(), "unknown workflow") {
+					t.Errorf("valid workflow %q should not produce workflow error: %v", tt.input, err)
+				}
+
+				return
+			}
+
+			// Invalid workflow should produce an error.
+			if err == nil {
+				t.Fatalf("expected validation error for workflow %q", tt.input)
+			}
+
+			got := err.Error()
+			if !contains(got, "unknown workflow") {
+				t.Errorf("error = %q, want to contain 'unknown workflow'", got)
+			}
+
+			if tt.want != "" {
+				wantHint := `did you mean "` + tt.want + `"`
+				if !contains(got, wantHint) {
+					t.Errorf("error = %q, want to contain %q", got, wantHint)
+				}
+			} else if contains(got, "did you mean") {
+				t.Errorf("error = %q, should not contain did-you-mean for distant input", got)
+			}
+		})
+	}
+}
+
+func TestValidate_WorkflowDidYouMean(t *testing.T) {
+	t.Parallel()
+
+	cfg := validConfig()
+	cfg.Workflow = "journy" // close typo for "journey".
+
+	err := cfg.Validate()
+	if err == nil {
+		t.Fatal("expected validation error for misspelled workflow")
+	}
+
+	if !contains(err.Error(), `did you mean "journey"`) {
+		t.Errorf("error = %q, want did-you-mean suggestion for journey", err.Error())
+	}
+}
+
+func TestValidate_WorkflowNoSuggestion(t *testing.T) {
+	t.Parallel()
+
+	cfg := validConfig()
+	cfg.Workflow = "zzzzzzzzz" // too distant from any workflow.
+
+	err := cfg.Validate()
+	if err == nil {
+		t.Fatal("expected validation error")
+	}
+
+	if contains(err.Error(), "did you mean") {
+		t.Errorf("error = %q, should not suggest for very distant input", err.Error())
+	}
+}
+
+func splitLines(s string) []string {
+	var lines []string
+
+	start := 0
+
+	for i := range len(s) {
+		if s[i] == '\n' {
+			lines = append(lines, s[start:i])
+			start = i + 1
+		}
+	}
+
+	if start < len(s) {
+		lines = append(lines, s[start:])
+	}
+
+	return lines
 }
 
 func validConfig() *config.Config {

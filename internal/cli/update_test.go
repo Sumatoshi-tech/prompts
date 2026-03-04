@@ -32,11 +32,11 @@ func setupProject(t *testing.T, modify func(*config.Config)) string {
 
 	cfg.GeneratedFiles = scaffold.FileManifest(rendered)
 
-	if err := config.Save(cfg, dir); err != nil {
+	if err = config.Save(cfg, dir); err != nil {
 		t.Fatalf("Save() error: %v", err)
 	}
 
-	if err := scaffold.Apply(rendered, dir, scaffold.ModeForce); err != nil {
+	if err = scaffold.Apply(rendered, dir, scaffold.ModeForce); err != nil {
 		t.Fatalf("Apply() error: %v", err)
 	}
 
@@ -54,7 +54,7 @@ func modifyConfig(t *testing.T, dir string, modify func(*config.Config)) {
 
 	modify(cfg)
 
-	if err := config.Save(cfg, dir); err != nil {
+	if err = config.Save(cfg, dir); err != nil {
 		t.Fatalf("Save() error: %v", err)
 	}
 }
@@ -110,6 +110,8 @@ func testUpdateConfig() *config.Config {
 
 // Test 1: Single Value Edit Updates Affected Files.
 func TestUpdate_SingleValueEdit(t *testing.T) {
+	t.Parallel()
+
 	dir := setupProject(t, nil)
 
 	// Verify AGENTS.md contains 85 initially.
@@ -145,6 +147,8 @@ func TestUpdate_SingleValueEdit(t *testing.T) {
 
 // Test 2: Multiple Value Edit Updates All Affected Files.
 func TestUpdate_MultipleValueEdit(t *testing.T) {
+	t.Parallel()
+
 	dir := setupProject(t, nil)
 
 	modifyConfig(t, dir, func(cfg *config.Config) {
@@ -178,11 +182,13 @@ func TestUpdate_MultipleValueEdit(t *testing.T) {
 
 // Test 3: Invalid YAML Syntax Fails with Parse Error.
 func TestUpdate_InvalidYAML(t *testing.T) {
+	t.Parallel()
+
 	dir := setupProject(t, nil)
 
 	// Corrupt the config file.
 	configPath := filepath.Join(dir, config.FileName)
-	if err := os.WriteFile(configPath, []byte(":::invalid:::\nproject_name: test\n"), 0o644); err != nil {
+	if err := os.WriteFile(configPath, []byte(":::invalid:::\nproject_name: test\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -198,6 +204,8 @@ func TestUpdate_InvalidYAML(t *testing.T) {
 
 // Test 4: Invalid Config Value Fails Validation.
 func TestUpdate_InvalidConfigValue(t *testing.T) {
+	t.Parallel()
+
 	dir := setupProject(t, nil)
 
 	// Write config with invalid coverage value.
@@ -209,7 +217,7 @@ func TestUpdate_InvalidConfigValue(t *testing.T) {
 	configPath := filepath.Join(dir, config.FileName)
 	raw, _ := os.ReadFile(configPath)
 	corrupted := string(raw) // coverage_min: 150 is already invalid (>100); use as-is.
-	os.WriteFile(configPath, []byte(corrupted), 0o644)
+	os.WriteFile(configPath, []byte(corrupted), 0o600)
 
 	_, err := runUpdateCapture(t, dir, true, false)
 	if err == nil {
@@ -223,6 +231,8 @@ func TestUpdate_InvalidConfigValue(t *testing.T) {
 
 // Test 5: Missing Required Field Fails Validation.
 func TestUpdate_MissingRequiredField(t *testing.T) {
+	t.Parallel()
+
 	dir := setupProject(t, nil)
 
 	// Write config without project_name.
@@ -230,7 +240,7 @@ func TestUpdate_MissingRequiredField(t *testing.T) {
 	raw, _ := os.ReadFile(configPath)
 	// Replace project_name value with empty string.
 	corrupted := strings.Replace(string(raw), "project_name: testproject", "project_name:", 1)
-	os.WriteFile(configPath, []byte(corrupted), 0o644)
+	os.WriteFile(configPath, []byte(corrupted), 0o600)
 
 	_, err := runUpdateCapture(t, dir, true, false)
 	if err == nil {
@@ -244,6 +254,8 @@ func TestUpdate_MissingRequiredField(t *testing.T) {
 
 // Test 6: Diff Preview Shows Correct Changed Files.
 func TestUpdate_DiffPreview(t *testing.T) {
+	t.Parallel()
+
 	dir := setupProject(t, nil)
 
 	modifyConfig(t, dir, func(cfg *config.Config) {
@@ -264,6 +276,8 @@ func TestUpdate_DiffPreview(t *testing.T) {
 
 // Test 7: Approving Changes Writes Files to Disk.
 func TestUpdate_ApproveWritesFiles(t *testing.T) {
+	t.Parallel()
+
 	dir := setupProject(t, nil)
 
 	modifyConfig(t, dir, func(cfg *config.Config) {
@@ -301,6 +315,8 @@ func TestUpdate_ApproveWritesFiles(t *testing.T) {
 
 // Test 8: Rejecting Changes Leaves Files Unchanged.
 func TestUpdate_RejectLeavesUnchanged(t *testing.T) {
+	t.Parallel()
+
 	dir := setupProject(t, nil)
 
 	// Record file checksums before.
@@ -336,6 +352,8 @@ func TestUpdate_RejectLeavesUnchanged(t *testing.T) {
 
 // Test 9: --yes Flag Auto-Approves Without Prompt.
 func TestUpdate_YesAutoApproves(t *testing.T) {
+	t.Parallel()
+
 	dir := setupProject(t, func(cfg *config.Config) {
 		cfg.Features.Benchmarks = true
 	})
@@ -367,6 +385,8 @@ func TestUpdate_YesAutoApproves(t *testing.T) {
 
 // Test 10: Adding a New Agent Generates Adapter Files.
 func TestUpdate_AddAgent(t *testing.T) {
+	t.Parallel()
+
 	dir := setupProject(t, func(cfg *config.Config) {
 		cfg.Agents = []string{config.AgentClaude}
 	})
@@ -386,13 +406,13 @@ func TestUpdate_AddAgent(t *testing.T) {
 	}
 
 	// GEMINI.md should now exist.
-	if _, err := os.Stat(filepath.Join(dir, "GEMINI.md")); err != nil {
+	if _, err = os.Stat(filepath.Join(dir, "GEMINI.md")); err != nil {
 		t.Error("GEMINI.md should exist after adding gemini agent")
 	}
 
 	// Gemini command files should exist.
 	geminiCmds := filepath.Join(dir, ".gemini", "commands")
-	if _, err := os.Stat(geminiCmds); err != nil {
+	if _, err = os.Stat(geminiCmds); err != nil {
 		t.Error(".gemini/commands/ should exist")
 	}
 
@@ -402,13 +422,15 @@ func TestUpdate_AddAgent(t *testing.T) {
 	}
 
 	// Claude files should still exist.
-	if _, err := os.Stat(filepath.Join(dir, ".claude", "commands")); err != nil {
+	if _, err = os.Stat(filepath.Join(dir, ".claude", "commands")); err != nil {
 		t.Error("Claude commands should still exist")
 	}
 }
 
 // Test 11: Removing an Agent Detects Stale Files.
 func TestUpdate_RemoveAgent(t *testing.T) {
+	t.Parallel()
+
 	dir := setupProject(t, func(cfg *config.Config) {
 		cfg.Agents = []string{config.AgentClaude, config.AgentCursor}
 	})
@@ -434,13 +456,15 @@ func TestUpdate_RemoveAgent(t *testing.T) {
 	}
 
 	// Claude files should remain.
-	if _, err := os.Stat(filepath.Join(dir, ".claude", "commands")); err != nil {
+	if _, err = os.Stat(filepath.Join(dir, ".claude", "commands")); err != nil {
 		t.Error("Claude commands should still exist after removing cursor")
 	}
 }
 
 // Test 12: CGO Toggle Regenerates Makefile with CGO Targets.
 func TestUpdate_CGOToggle(t *testing.T) {
+	t.Parallel()
+
 	dir := setupProject(t, func(cfg *config.Config) {
 		cfg.Features.CGO = false
 	})
@@ -467,6 +491,8 @@ func TestUpdate_CGOToggle(t *testing.T) {
 
 // Test 13: Docker Toggle Regenerates Makefile.
 func TestUpdate_DockerToggle(t *testing.T) {
+	t.Parallel()
+
 	dir := setupProject(t, func(cfg *config.Config) {
 		cfg.Features.Docker = true
 	})
@@ -497,6 +523,8 @@ func TestUpdate_DockerToggle(t *testing.T) {
 
 // Test 14: Config Schema Validation Aggregates Multiple Errors.
 func TestUpdate_ValidationAggregatesErrors(t *testing.T) {
+	t.Parallel()
+
 	dir := setupProject(t, nil)
 
 	// Write a config with multiple validation errors.
@@ -524,7 +552,7 @@ analysis_command:
 template_overrides: .promptkit/templates
 `
 
-	if err := os.WriteFile(configPath, []byte(raw), 0o644); err != nil {
+	if err := os.WriteFile(configPath, []byte(raw), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -549,6 +577,8 @@ template_overrides: .promptkit/templates
 
 // Test 15: Update with No Config Changes Is Idempotent.
 func TestUpdate_Idempotent(t *testing.T) {
+	t.Parallel()
+
 	dir := setupProject(t, nil)
 
 	// First update to ensure everything is in sync.
@@ -571,6 +601,8 @@ func TestUpdate_Idempotent(t *testing.T) {
 // Additional tests for new features.
 
 func TestUpdate_DryRunNoWrite(t *testing.T) {
+	t.Parallel()
+
 	dir := setupProject(t, nil)
 
 	// Record file state.
@@ -598,6 +630,8 @@ func TestUpdate_DryRunNoWrite(t *testing.T) {
 }
 
 func TestUpdate_DryRunClean(t *testing.T) {
+	t.Parallel()
+
 	dir := setupProject(t, nil)
 
 	// First update to sync.
@@ -615,6 +649,8 @@ func TestUpdate_DryRunClean(t *testing.T) {
 }
 
 func TestUpdate_UnifiedDiffOutput(t *testing.T) {
+	t.Parallel()
+
 	dir := setupProject(t, nil)
 
 	modifyConfig(t, dir, func(cfg *config.Config) {
@@ -634,6 +670,8 @@ func TestUpdate_UnifiedDiffOutput(t *testing.T) {
 }
 
 func TestUpdate_VerboseOutput(t *testing.T) {
+	t.Parallel()
+
 	dir := setupProject(t, nil)
 
 	modifyConfig(t, dir, func(cfg *config.Config) {
@@ -669,6 +707,8 @@ func TestUpdate_VerboseOutput(t *testing.T) {
 }
 
 func TestUpdate_ManifestUpdated(t *testing.T) {
+	t.Parallel()
+
 	dir := setupProject(t, nil)
 
 	// Run update to sync.
@@ -691,6 +731,8 @@ func TestUpdate_ManifestUpdated(t *testing.T) {
 }
 
 func TestUpdate_ProgressSteps(t *testing.T) {
+	t.Parallel()
+
 	dir := setupProject(t, nil)
 
 	modifyConfig(t, dir, func(cfg *config.Config) {
@@ -712,6 +754,8 @@ func TestUpdate_ProgressSteps(t *testing.T) {
 }
 
 func TestUpdate_ExplainFlag(t *testing.T) {
+	t.Parallel()
+
 	dir := setupProject(t, nil)
 
 	var buf bytes.Buffer
@@ -747,6 +791,8 @@ func TestUpdate_ExplainFlag(t *testing.T) {
 }
 
 func TestUpdate_ChangeAnnotation(t *testing.T) {
+	t.Parallel()
+
 	dir := setupProject(t, nil)
 
 	modifyConfig(t, dir, func(cfg *config.Config) {
@@ -762,6 +808,8 @@ func TestUpdate_ChangeAnnotation(t *testing.T) {
 }
 
 func TestUpdate_InteractiveApproveOne(t *testing.T) {
+	t.Parallel()
+
 	dir := setupProject(t, nil)
 
 	modifyConfig(t, dir, func(cfg *config.Config) {
@@ -798,6 +846,8 @@ func TestUpdate_InteractiveApproveOne(t *testing.T) {
 }
 
 func TestUpdate_InteractiveApplyAll(t *testing.T) {
+	t.Parallel()
+
 	dir := setupProject(t, nil)
 
 	modifyConfig(t, dir, func(cfg *config.Config) {
@@ -824,6 +874,8 @@ func TestUpdate_InteractiveApplyAll(t *testing.T) {
 }
 
 func TestUpdate_InteractiveQuit(t *testing.T) {
+	t.Parallel()
+
 	dir := setupProject(t, nil)
 
 	modifyConfig(t, dir, func(cfg *config.Config) {
@@ -850,6 +902,8 @@ func TestUpdate_InteractiveQuit(t *testing.T) {
 }
 
 func TestUpdate_BackupCreated(t *testing.T) {
+	t.Parallel()
+
 	dir := setupProject(t, nil)
 
 	modifyConfig(t, dir, func(cfg *config.Config) {
@@ -889,6 +943,8 @@ func TestUpdate_BackupCreated(t *testing.T) {
 }
 
 func TestUpdate_FileListAfterApply(t *testing.T) {
+	t.Parallel()
+
 	dir := setupProject(t, nil)
 
 	modifyConfig(t, dir, func(cfg *config.Config) {

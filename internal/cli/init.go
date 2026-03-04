@@ -74,7 +74,7 @@ Example (non-interactive):
 	RunE: runInit,
 }
 
-func runInit(cmd *cobra.Command, args []string) error {
+func runInit(_ *cobra.Command, args []string) error {
 	targetDir := "."
 	if len(args) > 0 {
 		targetDir = args[0]
@@ -85,7 +85,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("resolving path: %w", err)
 	}
 
-	if err := os.MkdirAll(targetDir, 0o755); err != nil {
+	if err = os.MkdirAll(targetDir, 0o750); err != nil {
 		return fmt.Errorf("creating directory: %w", err)
 	}
 
@@ -93,7 +93,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 	configPath := filepath.Join(targetDir, config.FileName)
 	configExists := false
 
-	if _, err := os.Stat(configPath); err == nil {
+	if _, statErr := os.Stat(configPath); statErr == nil {
 		configExists = true
 
 		if !initFlags.force {
@@ -102,8 +102,8 @@ func runInit(cmd *cobra.Command, args []string) error {
 	}
 
 	// Prevent concurrent execution.
-	if err := scaffold.AcquireLock(targetDir); err != nil {
-		return err
+	if lockErr := scaffold.AcquireLock(targetDir); lockErr != nil {
+		return lockErr
 	}
 	defer scaffold.ReleaseLock(targetDir)
 
@@ -144,7 +144,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	if err := config.Save(cfg, targetDir); err != nil {
+	if err = config.Save(cfg, targetDir); err != nil {
 		return fmt.Errorf("saving config: %w", err)
 	}
 
@@ -170,7 +170,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 
 	for path := range rendered {
 		fullPath := filepath.Join(targetDir, path)
-		if _, err := os.Stat(fullPath); err == nil {
+		if _, err = os.Stat(fullPath); err == nil {
 			existingPaths = append(existingPaths, path)
 		}
 	}
@@ -183,7 +183,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	if err := scaffold.Apply(rendered, targetDir, scaffold.ModeCreate); err != nil {
+	if err = scaffold.Apply(rendered, targetDir, scaffold.ModeCreate); err != nil {
 		if backupDir != "" {
 			if restoreErr := scaffold.RestoreBackup(backupDir, targetDir); restoreErr != nil {
 				fmt.Fprintf(os.Stderr, "Warning: backup restore also failed: %v\n", restoreErr)
@@ -197,7 +197,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 
 	// Store checksums in config.
 	cfg.Checksums = scaffold.ComputeChecksums(rendered)
-	if err := config.Save(cfg, targetDir); err != nil {
+	if err = config.Save(cfg, targetDir); err != nil {
 		return fmt.Errorf("saving config checksums: %w", err)
 	}
 

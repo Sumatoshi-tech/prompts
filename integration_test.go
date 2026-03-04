@@ -12,6 +12,8 @@ import (
 )
 
 func TestRenderAllTemplates(t *testing.T) {
+	t.Parallel()
+
 	cfg := &config.Config{
 		ProjectName: "myapp",
 		ModulePath:  "github.com/user/myapp",
@@ -72,6 +74,8 @@ func TestRenderAllTemplates(t *testing.T) {
 }
 
 func TestRenderAllTemplates_ProjectNameSubstitution(t *testing.T) {
+	t.Parallel()
+
 	cfg := &config.Config{
 		ProjectName: "coolproject",
 		ModulePath:  "github.com/cool/coolproject",
@@ -138,6 +142,8 @@ func TestRenderAllTemplates_ProjectNameSubstitution(t *testing.T) {
 }
 
 func TestRenderAllTemplates_CGOEnabled(t *testing.T) {
+	t.Parallel()
+
 	cfg := &config.Config{
 		ProjectName: "cgoproject",
 		ModulePath:  "github.com/user/cgoproject",
@@ -196,6 +202,8 @@ func TestRenderAllTemplates_CGOEnabled(t *testing.T) {
 }
 
 func TestRenderAllTemplates_NoCGO(t *testing.T) {
+	t.Parallel()
+
 	cfg := &config.Config{
 		ProjectName: "puregoproject",
 		ModulePath:  "github.com/user/puregoproject",
@@ -244,6 +252,8 @@ func TestRenderAllTemplates_NoCGO(t *testing.T) {
 }
 
 func TestRenderFull_Claude(t *testing.T) {
+	t.Parallel()
+
 	cfg := &config.Config{
 		ProjectName: "skillsapp",
 		ModulePath:  "github.com/user/skillsapp",
@@ -313,6 +323,8 @@ func TestRenderFull_Claude(t *testing.T) {
 }
 
 func TestRenderFull_AllAgents(t *testing.T) {
+	t.Parallel()
+
 	cfg := &config.Config{
 		ProjectName: "multiagent",
 		ModulePath:  "github.com/user/multiagent",
@@ -368,6 +380,8 @@ func TestRenderFull_AllAgents(t *testing.T) {
 }
 
 func TestRenderAllTemplates_NoCodefangReferences(t *testing.T) {
+	t.Parallel()
+
 	cfg := &config.Config{
 		ProjectName: "cleanproject",
 		ModulePath:  "github.com/user/cleanproject",
@@ -410,6 +424,8 @@ func TestRenderAllTemplates_NoCodefangReferences(t *testing.T) {
 }
 
 func TestRenderAllTemplates_RustEcosystem(t *testing.T) {
+	t.Parallel()
+
 	cfg := &config.Config{
 		ProjectName: "rustapp",
 		ModulePath:  "github.com/user/rustapp",
@@ -501,6 +517,8 @@ func TestRenderAllTemplates_RustEcosystem(t *testing.T) {
 }
 
 func TestRenderAllTemplates_ZigEcosystem(t *testing.T) {
+	t.Parallel()
+
 	cfg := &config.Config{
 		ProjectName: "zigapp",
 		ModulePath:  "github.com/user/zigapp",
@@ -595,6 +613,8 @@ func TestRenderAllTemplates_ZigEcosystem(t *testing.T) {
 // TestInit_NoPositionalArgUsesCWD verifies that when no project-dir argument
 // is provided, init writes files to the current working directory (TC-23).
 func TestInit_NoPositionalArgUsesCWD(t *testing.T) {
+	t.Parallel()
+
 	tmpDir := t.TempDir()
 
 	cfg := &config.Config{
@@ -620,30 +640,32 @@ func TestInit_NoPositionalArgUsesCWD(t *testing.T) {
 
 	cfg.GeneratedFiles = scaffold.FileManifest(rendered)
 
-	if err := config.Save(cfg, tmpDir); err != nil {
+	if err = config.Save(cfg, tmpDir); err != nil {
 		t.Fatalf("Save() error: %v", err)
 	}
 
-	if err := scaffold.Apply(rendered, tmpDir, scaffold.ModeCreate); err != nil {
+	if err = scaffold.Apply(rendered, tmpDir, scaffold.ModeCreate); err != nil {
 		t.Fatalf("Apply() error: %v", err)
 	}
 
 	// Verify .promptkit.yaml exists in the target directory.
 	configPath := filepath.Join(tmpDir, config.FileName)
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+	if _, err = os.Stat(configPath); os.IsNotExist(err) {
 		t.Fatalf(".promptkit.yaml not found in CWD target: %s", tmpDir)
 	}
 
 	// Verify key generated files exist.
 	for _, path := range []string{"AGENTS.md", ".golangci.yml", "Makefile", "scripts/deadcode-filter.sh"} {
 		fullPath := filepath.Join(tmpDir, path)
-		if _, err := os.Stat(fullPath); os.IsNotExist(err) {
+		if _, err = os.Stat(fullPath); os.IsNotExist(err) {
 			t.Errorf("expected file %s not found in CWD target", path)
 		}
 	}
 }
 
 func TestRenderFull_JourneyWorkflow_Golang(t *testing.T) {
+	t.Parallel()
+
 	cfg := &config.Config{
 		ProjectName: "journeyapp",
 		ModulePath:  "github.com/user/journeyapp",
@@ -699,6 +721,8 @@ func TestRenderFull_JourneyWorkflow_Golang(t *testing.T) {
 }
 
 func TestRenderFull_JourneyWorkflow_Rust(t *testing.T) {
+	t.Parallel()
+
 	cfg := &config.Config{
 		ProjectName:  "rustjourney",
 		ModulePath:   "github.com/user/rustjourney",

@@ -50,7 +50,7 @@ agent files -> compute diffs -> show changes -> approve -> apply atomically.
 Use --dry-run to preview changes without writing.
 Use --verify to run the analysis command after applying.
 Use --explain to see a detailed pipeline description before running.`,
-	RunE: func(cmd *cobra.Command, _ []string) error {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		dir, err := resolveConfigDir()
 		if err != nil {
 			return err
@@ -187,7 +187,8 @@ func RunUpdate(opts UpdateOptions) error {
 		}
 
 		// Log per-file agent ownership.
-		if ownership, err := adapters.FileOwnership(rendered, cfg.Agents, cfg.Workflow); err == nil {
+		var ownership map[string]adapters.FileAgent
+		if ownership, err = adapters.FileOwnership(rendered, cfg.Agents, cfg.Workflow); err == nil {
 			for _, agent := range cfg.Agents {
 				var files []string
 
@@ -466,7 +467,7 @@ func RunUpdate(opts UpdateOptions) error {
 		fmt.Fprintf(w, "  Backed up files to %s\n", backupDir)
 	}
 
-	if err := scaffold.Apply(toApply, opts.Dir, scaffold.ModeForce); err != nil {
+	if err = scaffold.Apply(toApply, opts.Dir, scaffold.ModeForce); err != nil {
 		// Attempt restore on failure.
 		if backupDir != "" {
 			if restoreErr := scaffold.RestoreBackup(backupDir, opts.Dir); restoreErr != nil {
@@ -481,7 +482,7 @@ func RunUpdate(opts UpdateOptions) error {
 
 	// Remove approved stale files.
 	if len(approvedStale) > 0 {
-		if err := scaffold.RemoveFiles(opts.Dir, approvedStale); err != nil {
+		if err = scaffold.RemoveFiles(opts.Dir, approvedStale); err != nil {
 			return fmt.Errorf("removing stale files: %w", err)
 		}
 	}
@@ -490,7 +491,7 @@ func RunUpdate(opts UpdateOptions) error {
 	cfg.GeneratedFiles = scaffold.FileManifest(rendered)
 	cfg.Checksums = scaffold.ComputeChecksums(rendered)
 
-	if err := config.Save(cfg, opts.Dir); err != nil {
+	if err = config.Save(cfg, opts.Dir); err != nil {
 		return fmt.Errorf("saving config manifest: %w", err)
 	}
 
@@ -515,7 +516,7 @@ func RunUpdate(opts UpdateOptions) error {
 	if opts.Verify {
 		progress("Running verification...")
 
-		if err := runVerify(w, opts.Dir, cfg.AnalysisCmd); err != nil {
+		if err = runVerify(w, opts.Dir, cfg.AnalysisCmd); err != nil {
 			if backupDir != "" {
 				fmt.Fprintf(w, "To restore: copy files from %s\n", backupDir)
 			}
