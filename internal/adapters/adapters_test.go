@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Sumatoshi-tech/promptkit/internal/adapters"
-	"github.com/Sumatoshi-tech/promptkit/internal/config"
+	"github.com/Sumatoshi-tech/prompts/internal/adapters"
+	"github.com/Sumatoshi-tech/prompts/internal/config"
 )
 
 func TestPlaceForAgents_Claude(t *testing.T) {
@@ -13,7 +13,7 @@ func TestPlaceForAgents_Claude(t *testing.T) {
 
 	rendered := testRendered()
 
-	files, err := adapters.PlaceForAgents(rendered, []string{config.AgentClaude}, config.WorkflowFRD)
+	files, err := adapters.PlaceForAgents(rendered, []string{config.AgentClaude})
 	if err != nil {
 		t.Fatalf("PlaceForAgents() error: %v", err)
 	}
@@ -23,14 +23,21 @@ func TestPlaceForAgents_Claude(t *testing.T) {
 	// Should produce Agent Skills standard paths.
 	assertContainsPath(t, paths, ".agents/skills/implement/SKILL.md")
 	assertContainsPath(t, paths, ".agents/skills/roadmap/SKILL.md")
-	assertContainsPath(t, paths, ".agents/skills/frd/SKILL.md")
 	assertContainsPath(t, paths, ".agents/skills/perf/SKILL.md")
+
+	// FRD/journey are templates under .agents/instructions/, not separate skills.
+	if paths[".agents/skills/frd/SKILL.md"] || paths[".agents/skills/journey/SKILL.md"] {
+		t.Error("frd/journey should not be Agent Skills")
+	}
 
 	// Should also produce Claude legacy commands.
 	assertContainsPath(t, paths, ".claude/commands/implement.md")
 	assertContainsPath(t, paths, ".claude/commands/roadmap.md")
-	assertContainsPath(t, paths, ".claude/commands/frd.md")
 	assertContainsPath(t, paths, ".claude/commands/perf.md")
+
+	if paths[".claude/commands/frd.md"] || paths[".claude/commands/journey.md"] {
+		t.Error("frd/journey should not have Claude slash-command files")
+	}
 }
 
 func TestPlaceForAgents_SkillMDHasFrontmatter(t *testing.T) {
@@ -38,7 +45,7 @@ func TestPlaceForAgents_SkillMDHasFrontmatter(t *testing.T) {
 
 	rendered := testRendered()
 
-	files, err := adapters.PlaceForAgents(rendered, []string{config.AgentClaude}, config.WorkflowFRD)
+	files, err := adapters.PlaceForAgents(rendered, []string{config.AgentClaude})
 	if err != nil {
 		t.Fatalf("PlaceForAgents() error: %v", err)
 	}
@@ -68,7 +75,7 @@ func TestPlaceForAgents_Codex(t *testing.T) {
 
 	rendered := testRendered()
 
-	files, err := adapters.PlaceForAgents(rendered, []string{config.AgentCodex}, config.WorkflowFRD)
+	files, err := adapters.PlaceForAgents(rendered, []string{config.AgentCodex})
 	if err != nil {
 		t.Fatalf("PlaceForAgents() error: %v", err)
 	}
@@ -85,7 +92,7 @@ func TestPlaceForAgents_Copilot(t *testing.T) {
 
 	rendered := testRendered()
 
-	files, err := adapters.PlaceForAgents(rendered, []string{config.AgentCopilot}, config.WorkflowFRD)
+	files, err := adapters.PlaceForAgents(rendered, []string{config.AgentCopilot})
 	if err != nil {
 		t.Fatalf("PlaceForAgents() error: %v", err)
 	}
@@ -102,7 +109,7 @@ func TestPlaceForAgents_Cursor(t *testing.T) {
 
 	rendered := testRendered()
 
-	files, err := adapters.PlaceForAgents(rendered, []string{config.AgentCursor}, config.WorkflowFRD)
+	files, err := adapters.PlaceForAgents(rendered, []string{config.AgentCursor})
 	if err != nil {
 		t.Fatalf("PlaceForAgents() error: %v", err)
 	}
@@ -133,7 +140,7 @@ func TestPlaceForAgents_Gemini(t *testing.T) {
 
 	rendered := testRendered()
 
-	files, err := adapters.PlaceForAgents(rendered, []string{config.AgentGemini}, config.WorkflowFRD)
+	files, err := adapters.PlaceForAgents(rendered, []string{config.AgentGemini})
 	if err != nil {
 		t.Fatalf("PlaceForAgents() error: %v", err)
 	}
@@ -167,7 +174,7 @@ func TestPlaceForAgents_Windsurf(t *testing.T) {
 
 	rendered := testRendered()
 
-	files, err := adapters.PlaceForAgents(rendered, []string{config.AgentWindsurf}, config.WorkflowFRD)
+	files, err := adapters.PlaceForAgents(rendered, []string{config.AgentWindsurf})
 	if err != nil {
 		t.Fatalf("PlaceForAgents() error: %v", err)
 	}
@@ -187,7 +194,7 @@ func TestPlaceForAgents_MultipleAgents(t *testing.T) {
 
 	agents := []string{config.AgentClaude, config.AgentGemini, config.AgentCursor}
 
-	files, err := adapters.PlaceForAgents(rendered, agents, config.WorkflowFRD)
+	files, err := adapters.PlaceForAgents(rendered, agents)
 	if err != nil {
 		t.Fatalf("PlaceForAgents() error: %v", err)
 	}
@@ -213,7 +220,7 @@ func TestPlaceForAgents_UnknownAgent(t *testing.T) {
 
 	rendered := testRendered()
 
-	_, err := adapters.PlaceForAgents(rendered, []string{"unknown"}, config.WorkflowFRD)
+	_, err := adapters.PlaceForAgents(rendered, []string{"unknown"})
 	if err == nil {
 		t.Fatal("expected error for unknown agent, got nil")
 	}
@@ -229,7 +236,7 @@ func TestRemoveInstructionPaths(t *testing.T) {
 	}
 
 	for _, p := range paths {
-		if !strings.HasPrefix(p, "instructions/") {
+		if !strings.HasPrefix(p, adapters.AgentInstructionsDir+"/") {
 			t.Errorf("unexpected removal path: %s", p)
 		}
 	}
@@ -238,10 +245,10 @@ func TestRemoveInstructionPaths(t *testing.T) {
 func testRendered() map[string][]byte {
 	return map[string][]byte{
 		"AGENTS.md":                       []byte("# Agent Personality\nTest content"),
-		"instructions/instr-implement.md": []byte("# Implementation instructions"),
-		"instructions/instr-roadmaper.md": []byte("# Roadmap instructions"),
-		"instructions/instr-frd.md":       []byte("# FRD template"),
-		"instructions/instr-perf.md":      []byte("# Performance instructions"),
+		".agents/instructions/instr-implement.md": []byte("# Implementation instructions"),
+		".agents/instructions/instr-roadmaper.md": []byte("# Roadmap instructions"),
+		".agents/instructions/instr-frd.md":       []byte("# FRD template"),
+		".agents/instructions/instr-perf.md":      []byte("# Performance instructions"),
 		".golangci.yml":                   []byte("version: 2"),
 		"Makefile":                        []byte("all: build"),
 	}
@@ -269,7 +276,7 @@ func TestFileOwnership_SingleAgent(t *testing.T) {
 
 	rendered := testRendered()
 
-	ownership, err := adapters.FileOwnership(rendered, []string{config.AgentClaude}, config.WorkflowFRD)
+	ownership, err := adapters.FileOwnership(rendered, []string{config.AgentClaude})
 	if err != nil {
 		t.Fatalf("FileOwnership() error: %v", err)
 	}
@@ -295,7 +302,7 @@ func TestFileOwnership_MultipleAgents(t *testing.T) {
 	rendered := testRendered()
 	agents := []string{config.AgentClaude, config.AgentCursor}
 
-	ownership, err := adapters.FileOwnership(rendered, agents, config.WorkflowFRD)
+	ownership, err := adapters.FileOwnership(rendered, agents)
 	if err != nil {
 		t.Fatalf("FileOwnership() error: %v", err)
 	}
@@ -317,7 +324,7 @@ func TestFileOwnership_SharedVsSpecific(t *testing.T) {
 	rendered := testRendered()
 	agents := []string{config.AgentClaude, config.AgentGemini}
 
-	ownership, err := adapters.FileOwnership(rendered, agents, config.WorkflowFRD)
+	ownership, err := adapters.FileOwnership(rendered, agents)
 	if err != nil {
 		t.Fatalf("FileOwnership() error: %v", err)
 	}
@@ -343,36 +350,30 @@ func TestFileOwnership_SharedVsSpecific(t *testing.T) {
 	}
 }
 
-func TestPlaceForAgents_JourneyWorkflow(t *testing.T) {
+func TestPlaceForAgents_JourneyRendered_SameSkillsAsFRD(t *testing.T) {
 	t.Parallel()
 
+	// Workflow templates are not skills; journey vs frd only affects which
+	// Workflow template under .agents/instructions/ remains on disk — not a skill.
 	rendered := testRenderedJourney()
 
-	files, err := adapters.PlaceForAgents(rendered, []string{config.AgentClaude}, config.WorkflowJourney)
+	files, err := adapters.PlaceForAgents(rendered, []string{config.AgentClaude})
 	if err != nil {
 		t.Fatalf("PlaceForAgents() error: %v", err)
 	}
 
 	paths := filePaths(files)
 
-	// Journey workflow should produce journey skill, not frd.
-	assertContainsPath(t, paths, ".agents/skills/journey/SKILL.md")
-	assertContainsPath(t, paths, ".claude/commands/journey.md")
 	assertContainsPath(t, paths, ".agents/skills/implement/SKILL.md")
 	assertContainsPath(t, paths, ".agents/skills/roadmap/SKILL.md")
 	assertContainsPath(t, paths, ".agents/skills/perf/SKILL.md")
 
-	// FRD should NOT be present.
-	if paths[".agents/skills/frd/SKILL.md"] {
-		t.Error("journey workflow should not produce frd skill")
-	}
-
-	if paths[".claude/commands/frd.md"] {
-		t.Error("journey workflow should not produce frd command")
+	if paths[".agents/skills/frd/SKILL.md"] || paths[".agents/skills/journey/SKILL.md"] {
+		t.Error("frd/journey should not be Agent Skills")
 	}
 }
 
-func TestRemoveInstructionPaths_IncludesAllWorkflows(t *testing.T) {
+func TestRemoveInstructionPaths_SkillsOnlyNotWorkflowTemplates(t *testing.T) {
 	t.Parallel()
 
 	paths := adapters.RemoveInstructionPaths()
@@ -382,16 +383,16 @@ func TestRemoveInstructionPaths_IncludesAllWorkflows(t *testing.T) {
 		pathSet[p] = true
 	}
 
-	// Should include both FRD and journey instruction paths.
-	if !pathSet["instructions/instr-frd.md"] {
-		t.Error("RemoveInstructionPaths should include instr-frd.md")
+	// Workflow outlines stay on disk for /implement — do not delete them here.
+	if pathSet[".agents/instructions/instr-frd.md"] {
+		t.Error("RemoveInstructionPaths must not include instr-frd.md")
 	}
 
-	if !pathSet["instructions/instr-journey.md"] {
-		t.Error("RemoveInstructionPaths should include instr-journey.md")
+	if pathSet[".agents/instructions/instr-journey.md"] {
+		t.Error("RemoveInstructionPaths must not include instr-journey.md")
 	}
 
-	if !pathSet["instructions/instr-implement.md"] {
+	if !pathSet[".agents/instructions/instr-implement.md"] {
 		t.Error("RemoveInstructionPaths should include instr-implement.md")
 	}
 }
@@ -399,10 +400,10 @@ func TestRemoveInstructionPaths_IncludesAllWorkflows(t *testing.T) {
 func testRenderedJourney() map[string][]byte {
 	return map[string][]byte{
 		"AGENTS.md":                       []byte("# Agent Personality\nTest content"),
-		"instructions/instr-implement.md": []byte("# Implementation instructions"),
-		"instructions/instr-roadmaper.md": []byte("# Roadmap instructions"),
-		"instructions/instr-journey.md":   []byte("# Journey template"),
-		"instructions/instr-perf.md":      []byte("# Performance instructions"),
+		".agents/instructions/instr-implement.md": []byte("# Implementation instructions"),
+		".agents/instructions/instr-roadmaper.md": []byte("# Roadmap instructions"),
+		".agents/instructions/instr-journey.md":   []byte("# Journey template"),
+		".agents/instructions/instr-perf.md":      []byte("# Performance instructions"),
 		".golangci.yml":                   []byte("version: 2"),
 		"Makefile":                        []byte("all: build"),
 	}
@@ -426,7 +427,7 @@ func TestSkillContent_SemanticEquivalence(t *testing.T) {
 	}
 
 	// The raw body of the "implement" skill.
-	rawBody := string(rendered["instructions/instr-implement.md"])
+	rawBody := string(rendered[".agents/instructions/instr-implement.md"])
 	if rawBody == "" {
 		t.Fatal("missing implement instruction in rendered")
 	}
@@ -438,7 +439,7 @@ func TestSkillContent_SemanticEquivalence(t *testing.T) {
 	expected := normalize(rawBody)
 
 	for _, agent := range allAgents {
-		files, err := adapters.PlaceForAgents(rendered, []string{agent}, config.WorkflowFRD)
+		files, err := adapters.PlaceForAgents(rendered, []string{agent})
 		if err != nil {
 			t.Fatalf("PlaceForAgents(%s) error: %v", agent, err)
 		}

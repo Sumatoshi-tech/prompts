@@ -10,14 +10,14 @@ endif
 PKG = $(shell go env GOOS)_$(shell go env GOARCH)
 TAGS ?=
 
-VERSION_PKG = github.com/Sumatoshi-tech/promptkit/pkg/version
+VERSION_PKG = github.com/Sumatoshi-tech/prompts/pkg/version
 GIT_COMMIT  = $(shell git rev-parse --short HEAD 2>/dev/null || echo "none")
 GIT_VERSION = $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 BUILD_DATE  = $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 LDFLAGS     = -X $(VERSION_PKG).Version=$(GIT_VERSION) -X $(VERSION_PKG).Commit=$(GIT_COMMIT) -X $(VERSION_PKG).Date=$(BUILD_DATE)
 CGO_ENABLED=0
 
-all: ${GOBIN}/promptkit${EXE}
+all: ${GOBIN}/promptkit${EXE} 
 
 # Build all binaries (alias for all)
 .PHONY: build
@@ -44,7 +44,6 @@ help:
 install: all
 	@echo "Installing binaries..."
 	@mkdir -p ~/.local/bin
-	@rm -f ~/.local/bin/promptkit${EXE}
 	@cp ${GOBIN}/promptkit${EXE} ~/.local/bin/
 	@echo "Installed to ~/.local/bin"
 	@if ! echo $$PATH | grep -q "$$HOME/.local/bin"; then \
@@ -145,3 +144,4 @@ clean:
 
 ${GOBIN}/promptkit${EXE}:
 	CGO_ENABLED=0 go build -tags "$(TAGS)" -ldflags "$(LDFLAGS)" -o ${GOBIN}/promptkit${EXE} ./cmd/promptkit
+

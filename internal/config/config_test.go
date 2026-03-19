@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/Sumatoshi-tech/promptkit/internal/config"
+	"github.com/Sumatoshi-tech/prompts/internal/config"
 )
 
 func TestDefault(t *testing.T) {

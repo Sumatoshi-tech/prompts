@@ -8,9 +8,9 @@ import (
 	"testing"
 	"testing/fstest"
 
-	promptkit "github.com/Sumatoshi-tech/promptkit"
-	"github.com/Sumatoshi-tech/promptkit/internal/config"
-	"github.com/Sumatoshi-tech/promptkit/internal/scaffold"
+	promptkit "github.com/Sumatoshi-tech/prompts"
+	"github.com/Sumatoshi-tech/prompts/internal/config"
+	"github.com/Sumatoshi-tech/prompts/internal/scaffold"
 )
 
 func TestRender_SimpleTemplate(t *testing.T) {
@@ -74,7 +74,7 @@ func TestRender_NestedPaths(t *testing.T) {
 	t.Parallel()
 
 	tmplFS := fstest.MapFS{
-		"templates/golang/instructions/instr-frd.md.tmpl": &fstest.MapFile{
+		"templates/golang/.agents/instructions/instr-frd.md.tmpl": &fstest.MapFile{
 			Data: []byte("# FRD Template"),
 		},
 	}
@@ -86,8 +86,8 @@ func TestRender_NestedPaths(t *testing.T) {
 		t.Fatalf("Render() error: %v", err)
 	}
 
-	if _, ok := result["instructions/instr-frd.md"]; !ok {
-		t.Error("expected instructions/instr-frd.md in output")
+	if _, ok := result[".agents/instructions/instr-frd.md"]; !ok {
+		t.Error("expected .agents/instructions/instr-frd.md in output")
 	}
 }
 
@@ -1193,11 +1193,10 @@ func TestRenderFull_BasicGolang(t *testing.T) {
 		t.Fatalf("RenderFull() error: %v", err)
 	}
 
-	// Agent Skills SKILL.md files should be present.
+	// Agent Skills SKILL.md files should be present (FRD/journey stay under .agents/instructions/).
 	expectedSkills := []string{
 		".agents/skills/implement/SKILL.md",
 		".agents/skills/roadmap/SKILL.md",
-		".agents/skills/frd/SKILL.md",
 		".agents/skills/perf/SKILL.md",
 	}
 
@@ -1214,25 +1213,32 @@ func TestRenderFull_BasicGolang(t *testing.T) {
 	}
 
 	// Claude legacy commands should be present.
-	for _, name := range []string{"implement", "roadmap", "frd", "perf"} {
+	for _, name := range []string{"implement", "roadmap", "perf"} {
 		path := ".claude/commands/" + name + ".md"
 		if _, ok := result[path]; !ok {
 			t.Errorf("missing Claude command: %s", path)
 		}
 	}
 
-	// Raw instruction files should NOT be in the output.
-	rawPaths := []string{
-		"instructions/instr-implement.md",
-		"instructions/instr-roadmaper.md",
-		"instructions/instr-frd.md",
-		"instructions/instr-perf.md",
+	// Skill-backed instructions removed; workflow template remains on disk.
+	removedPaths := []string{
+		".agents/instructions/instr-implement.md",
+		".agents/instructions/instr-roadmaper.md",
+		".agents/instructions/instr-perf.md",
 	}
 
-	for _, path := range rawPaths {
+	for _, path := range removedPaths {
 		if _, ok := result[path]; ok {
-			t.Errorf("raw instruction file should be removed: %s", path)
+			t.Errorf("skill instruction file should be removed: %s", path)
 		}
+	}
+
+	if _, ok := result[".agents/instructions/instr-frd.md"]; !ok {
+		t.Error("expected .agents/instructions/instr-frd.md to remain for frd workflow")
+	}
+
+	if _, ok := result[".agents/instructions/instr-journey.md"]; ok {
+		t.Error("instr-journey.md should not be shipped for frd workflow")
 	}
 
 	// Non-instruction base files should still be present.
@@ -1266,14 +1272,21 @@ func TestRenderFull_JourneyWorkflow(t *testing.T) {
 		t.Fatalf("RenderFull() error: %v", err)
 	}
 
-	// Journey skill should be present instead of FRD.
-	if _, ok := result[".agents/skills/journey/SKILL.md"]; !ok {
-		t.Error("missing journey skill file for journey workflow")
+	// Journey template on disk; no separate journey skill.
+	if _, ok := result[".agents/instructions/instr-journey.md"]; !ok {
+		t.Error("expected .agents/instructions/instr-journey.md for journey workflow")
 	}
 
-	// FRD skill should NOT be present.
+	if _, ok := result[".agents/instructions/instr-frd.md"]; ok {
+		t.Error("instr-frd.md should not be shipped for journey workflow")
+	}
+
+	if _, ok := result[".agents/skills/journey/SKILL.md"]; ok {
+		t.Error("journey should not be an Agent Skill")
+	}
+
 	if _, ok := result[".agents/skills/frd/SKILL.md"]; ok {
-		t.Error("frd skill should not be present in journey workflow")
+		t.Error("frd should not be an Agent Skill")
 	}
 
 	// Base skills should still be present.
@@ -1359,7 +1372,7 @@ func TestRenderFullWithOverrides_Basic(t *testing.T) {
 		"templates/golang/README.md.tmpl": &fstest.MapFile{
 			Data: []byte("# Embedded {{.ProjectName}}"),
 		},
-		"templates/golang/instructions/instr-implement.md.tmpl": &fstest.MapFile{
+		"templates/golang/.agents/instructions/instr-implement.md.tmpl": &fstest.MapFile{
 			Data: []byte("implement instruction for {{.ProjectName}}"),
 		},
 	}

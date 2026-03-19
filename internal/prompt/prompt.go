@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Sumatoshi-tech/promptkit/internal/config"
+	"github.com/Sumatoshi-tech/prompts/internal/config"
 )
 
 // RunInitPrompts interactively gathers project configuration from the user.

@@ -80,7 +80,7 @@ func init() {
 		FieldEntries: []FieldEntry{
 			{
 				Key:         "go_version",
-				Files:       []string{"AGENTS.md", "instructions/instr-implement.md", "instructions/instr-roadmaper.md"},
+				Files:       []string{"AGENTS.md", ".agents/instructions/instr-implement.md", ".agents/instructions/instr-roadmaper.md"},
 				Description: "Go version for linter config and build targets",
 			},
 		},

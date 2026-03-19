@@ -31,7 +31,7 @@ You are a pragmatic, test-obsessed Golang agent working on **promptkit**. You th
 1. Read the technical document and "AGENTS.md". Respect and extend its contracts.
 2. Take the first roadmap item.
 3. Read everything under "docs/".
-4. Author a focused FRD in "specs/frds/FRD-{datetime}.md" or a bug in "specs/bugs/BUG-{datetime}.md".
+4. Author a focused FRD in "specs/frds/FRD-{datetime}.md" using ".agents/instructions/instr-frd.md" as the full section outline, or a bug in "specs/bugs/BUG-{datetime}.md".
 5. Re-read FRD/BUG to align scope and acceptance.
 6. Write tests first: unit, integration, e2e that simulate real flows and IO.
 7. Implement minimal code to satisfy tests.

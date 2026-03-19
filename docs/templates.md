@@ -8,7 +8,7 @@ Each ecosystem (Go, Rust, Zig) has its own set of templates that produce ecosyst
 
 The core agent personality document. Defines:
 - Identity, expertise, and non-negotiables
-- 14-step working loop (read docs, write FRD/journey, TDD, lint, iterate)
+- 14-step working loop (read docs, write FRD or journey from `.agents/instructions/` template, TDD, lint, iterate)
 - Micro-TDD development flow with loop contract
 - E2E testing philosophy
 - Architecture preferences and code patterns
@@ -20,11 +20,11 @@ The core agent personality document. Defines:
 
 | Skill | File | Workflow | Purpose |
 |-------|------|----------|---------|
-| `/implement` | `instr-implement.md` | both | Iterative TDD implementation following a roadmap. 16-step workflow with micro-TDD loop contract (Plan, RED, GREEN, Reflect, Refactor, Verify). Small-change fast path for trivial fixes. Cross-skill traceability. |
+| `/implement` | `instr-implement.md` | both | Iterative TDD implementation following a roadmap. Tells the agent to open the workflow template (`instr-frd.md` or `instr-journey.md`) and copy it into `specs/`. 16-step workflow with micro-TDD loop; small-change fast path; traceability. |
 | `/roadmap` | `instr-roadmaper.md` | both | Decompose a specification into a progressive, testable roadmap with DoD/DoR per step. Detects existing implementations. Update mode for re-syncing with codebase changes. |
-| `/frd` | `instr-frd.md` | frd | Feature Requirements Document template. MoSCoW format, stressor scenarios, acceptance criteria, test matrix. |
-| `/journey` | `instr-journey.md` | journey | Journey-based feature requirements with CJM. Phases, friction analysis, UX assessment, test cases. |
 | `/perf` | `instr-perf.md` | both | Performance diagnosis across 5 phases. Bottleneck classification (Class A-E). Platform-aware: Linux (perf) and macOS (Instruments/DTrace). |
+
+**Workflow templates (not skills):** `.agents/instructions/instr-frd.md` (frd workflow) and `.agents/instructions/instr-journey.md` (journey workflow) stay on disk. Only one is generated per project. They are section outlines for `/implement`, not separate slash commands or `SKILL.md` entries.
 
 ### Ecosystem-Specific Files
 

@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	promptkit "github.com/Sumatoshi-tech/promptkit"
-	"github.com/Sumatoshi-tech/promptkit/internal/config"
-	"github.com/Sumatoshi-tech/promptkit/internal/scaffold"
+	promptkit "github.com/Sumatoshi-tech/prompts"
+	"github.com/Sumatoshi-tech/prompts/internal/config"
+	"github.com/Sumatoshi-tech/prompts/internal/scaffold"
 )
 
 // benchConfig returns a representative config used across all benchmarks.

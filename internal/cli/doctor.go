@@ -10,10 +10,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	promptkit "github.com/Sumatoshi-tech/promptkit"
-	"github.com/Sumatoshi-tech/promptkit/internal/adapters"
-	"github.com/Sumatoshi-tech/promptkit/internal/config"
-	"github.com/Sumatoshi-tech/promptkit/internal/scaffold"
+	promptkit "github.com/Sumatoshi-tech/prompts"
+	"github.com/Sumatoshi-tech/prompts/internal/adapters"
+	"github.com/Sumatoshi-tech/prompts/internal/config"
+	"github.com/Sumatoshi-tech/prompts/internal/scaffold"
 )
 
 func init() {
@@ -76,7 +76,7 @@ func runDoctor(_ *cobra.Command, _ []string) error {
 		return errors.New("doctor found errors")
 	}
 
-	ownership, err := adapters.FileOwnership(rendered, cfg.Agents, cfg.Workflow)
+	ownership, err := adapters.FileOwnership(rendered, cfg.Agents)
 	if err != nil {
 		fmt.Printf("  [err] File ownership: %v\n", err)
 		return errors.New("doctor found errors")

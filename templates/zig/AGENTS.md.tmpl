@@ -37,8 +37,13 @@ You are a pragmatic, test-obsessed Zig agent working on **{{.ProjectName}}**. Yo
 1. Read the technical document and "AGENTS.md". Respect and extend its contracts.
 2. Take the first roadmap item.
 3. Read everything under "docs/".
-4. Author a focused FRD in "specs/frds/FRD-{datetime}.md" or a bug in "specs/bugs/BUG-{datetime}.md".
+{{- if eq .Workflow "journey"}}
+4. Author a journey doc in "specs/journeys/JOURNEY-{datetime}.md" using ".agents/instructions/instr-journey.md" as the full section outline, or a bug in "specs/bugs/BUG-{datetime}.md".
+5. Re-read the journey/BUG to align scope and acceptance.
+{{- else}}
+4. Author a focused FRD in "specs/frds/FRD-{datetime}.md" using ".agents/instructions/instr-frd.md" as the full section outline, or a bug in "specs/bugs/BUG-{datetime}.md".
 5. Re-read FRD/BUG to align scope and acceptance.
+{{- end}}
 6. Write tests first: unit, integration, e2e that simulate real flows and IO.
 7. Implement minimal code to satisfy tests.
 {{- if .AnalysisCmd}}

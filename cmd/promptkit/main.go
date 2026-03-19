@@ -4,7 +4,7 @@ package main
 import (
 	"os"
 
-	"github.com/Sumatoshi-tech/promptkit/internal/cli"
+	"github.com/Sumatoshi-tech/prompts/internal/cli"
 )
 
 func main() {
