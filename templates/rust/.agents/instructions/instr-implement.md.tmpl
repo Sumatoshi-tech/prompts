@@ -18,11 +18,11 @@ Your task is to:
 2. Take first item (feature) from roadmap
 3. Read all docs in docs/ & understand clippy configuration to write code correctly
 {{- if eq .Workflow "journey"}}
-4. Write journey document and put it to specs/journeys/JOURNEY-{id}.md. See [instr-journey.md](instr-journey.md)
-5. Read journey document
+4. Open [`.agents/instructions/instr-journey.md`](.agents/instructions/instr-journey.md) — this is the **template** (not a separate skill). Create `specs/journeys/JOURNEY-{id}.md` by copying its section structure and filling every section; do not substitute a shorter outline.
+5. Re-read the journey document you wrote; it is the binding spec for scoped work.
 {{- else}}
-4. Write feature requirements document and put it to specs/frds/FRD-{id}.md. See [instr-frd.md](instr-frd.md)
-5. Read FRD
+4. Open [`.agents/instructions/instr-frd.md`](.agents/instructions/instr-frd.md) — this is the **template** (not a separate skill). Create `specs/frds/FRD-{id}.md` by copying its section structure and filling every section; do not substitute a shorter outline.
+5. Re-read the FRD; it is the binding spec for scoped work.
 {{- end}}
 6. Write tests (min {{.Quality.CoverageCritical}}% coverage)
 7. Write implementation. If you know any popular crates that could help, use them. If not, write your own. If using crates always assess them if they are still active and maintained.

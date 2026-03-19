@@ -21,6 +21,24 @@ Rules of writing roadmap:
 2. You should create progressive decomposition, meaning that every step in roadmap should be valuable itself
 3. It should be possible to test every step
 
+## Example roadmap shape
+
+Each item is a checklist block: title, **Description**, **DoR** (ready to start), **DoD** (done). Use `- [ ]` for open work and `- [x]` when complete (especially in update mode). Link evidence (test files, PRs, commits by path) on the DoD line when marking done.
+
+```markdown
+## Roadmap: Example feature area
+
+### 1 — First incremental slice
+- [ ] **Description:** One sentence on the outcome (user-visible or internal capability).
+- [ ] **DoR:** Spec references this item; dependencies and smallest test plan are clear.
+- [ ] **DoD:** Automated tests prove the behavior; static analysis / linter clean; docs or config updated if the change is user-facing.
+
+### 2 — Next slice
+- [ ] **Description:** Builds on item 1 without breaking prior behavior.
+- [ ] **DoR:** Item 1 checklist fully `[x]` with evidence noted on DoD.
+- [ ] **DoD:** Same quality bar as item 1; link to FRD or journey doc if your workflow produces one per item.
+```
+
 You should put roadmaps to specs/
 
 ## Update Mode

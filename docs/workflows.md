@@ -5,17 +5,17 @@ promptkit supports two spec-driven development methodologies. Both follow the sa
 ## FRD Workflow (default)
 
 ```
-Research --> Spec --> /roadmap --> /frd --> /implement (iterative) --> /perf
-                        |                      |
-                        v                      v
-                   specs/{name}/         specs/frds/FRD-{id}.md
-                   roadmap.md            (created by /implement)
+Research --> Spec --> /roadmap --> /implement (iterative) --> /perf
+                        |              |
+                        v              v
+                   specs/{name}/  specs/frds/FRD-{id}.md
+                   roadmap.md     (from .agents/instructions/instr-frd.md via /implement)
 ```
 
 1. **Research** the problem domain
 2. **Write a specification** in `specs/`
 3. **`/roadmap`** -- Decompose the spec into a progressive roadmap with testable steps
-4. **`/implement`** -- For each roadmap item: write FRD, write tests first, implement, lint, iterate
+4. **`/implement`** -- For each roadmap item: copy/fill `.agents/instructions/instr-frd.md` into `specs/frds/FRD-{id}.md`, then tests first, implement, lint, iterate
 5. **`/perf`** -- Profile, classify bottleneck, optimize with evidence
 
 Each step produces traceable artifacts. FRDs link back to roadmap items. Implementation files link back to FRDs.
@@ -33,14 +33,14 @@ Each step produces traceable artifacts. FRDs link back to roadmap items. Impleme
 ## Journey Workflow
 
 ```
-Research --> Spec --> /roadmap --> /journey --> /implement (iterative) --> /perf
-                        |                          |
-                        v                          v
-                   specs/{name}/            specs/journeys/JOURNEY-{id}.md
-                   roadmap.md               (created by /implement)
+Research --> Spec --> /roadmap --> /implement (iterative) --> /perf
+                        |              |
+                        v              v
+                   specs/{name}/  specs/journeys/JOURNEY-{id}.md
+                   roadmap.md     (from .agents/instructions/instr-journey.md via /implement)
 ```
 
-Same flow, but each roadmap item produces a journey document instead of an FRD.
+Same flow, but each roadmap item produces a journey document instead of an FRD, using the journey template under `.agents/instructions/`.
 
 ### Journey Contents
 
@@ -67,4 +67,4 @@ For trivial fixes (< 15 lines, no new API, no architecture impact), `/implement`
 
 ## Switching Workflows
 
-Edit `workflow:` in `.promptkit.yaml` and run `promptkit update`. The `/frd` skill will be replaced by `/journey` (or vice versa) and the `/implement` skill will update its artifact references.
+Edit `workflow:` in `.promptkit.yaml` and run `promptkit update`. The shipped template under `.agents/instructions/` switches between `instr-frd.md` and `instr-journey.md`, and the `/implement` skill text updates to match. Neither template is a separate Agent Skill.

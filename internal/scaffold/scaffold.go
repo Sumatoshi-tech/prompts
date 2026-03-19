@@ -19,8 +19,8 @@ import (
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
-	"github.com/Sumatoshi-tech/promptkit/internal/adapters"
-	"github.com/Sumatoshi-tech/promptkit/internal/config"
+	"github.com/Sumatoshi-tech/prompts/internal/adapters"
+	"github.com/Sumatoshi-tech/prompts/internal/config"
 )
 
 const tmplSuffix = ".tmpl"
@@ -449,11 +449,13 @@ func RenderSingle(cfg *config.Config, tmplFS fs.FS, overrideDir, name string) ([
 }
 
 func applyAgentAdapters(rendered map[string][]byte, agents []string, workflow string) (map[string][]byte, error) {
+	pruneInactiveWorkflowTemplates(rendered, workflow)
+
 	if len(agents) == 0 {
 		return rendered, nil
 	}
 
-	placed, err := adapters.PlaceForAgents(rendered, agents, workflow)
+	placed, err := adapters.PlaceForAgents(rendered, agents)
 	if err != nil {
 		return nil, fmt.Errorf("placing agent files: %w", err)
 	}
@@ -469,6 +471,17 @@ func applyAgentAdapters(rendered map[string][]byte, agents []string, workflow st
 	}
 
 	return rendered, nil
+}
+
+// pruneInactiveWorkflowTemplates drops the workflow template that does not
+// apply so only one of instr-frd.md / instr-journey.md is shipped.
+func pruneInactiveWorkflowTemplates(rendered map[string][]byte, workflow string) {
+	switch workflow {
+	case config.WorkflowJourney:
+		delete(rendered, adapters.InstrFRDPath)
+	default:
+		delete(rendered, adapters.InstrJourneyPath)
+	}
 }
 
 func newTemplateFuncMap() template.FuncMap {

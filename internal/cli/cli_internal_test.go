@@ -10,9 +10,9 @@ import (
 	"strings"
 	"testing"
 
-	promptkit "github.com/Sumatoshi-tech/promptkit"
-	"github.com/Sumatoshi-tech/promptkit/internal/config"
-	"github.com/Sumatoshi-tech/promptkit/internal/scaffold"
+	promptkit "github.com/Sumatoshi-tech/prompts"
+	"github.com/Sumatoshi-tech/prompts/internal/config"
+	"github.com/Sumatoshi-tech/prompts/internal/scaffold"
 )
 
 // internalSetupProject creates a scaffolded project in a temp dir and returns the dir path.

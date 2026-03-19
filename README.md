@@ -17,14 +17,14 @@ promptkit generates AGENTS.md, instruction skills, Makefile, linter config, and 
 ## Install
 
 ```bash
-go install github.com/dmitriy/promptkit/cmd/promptkit@latest
+go install github.com/Sumatoshi-tech/prompts/cmd/promptkit@latest
 ```
 
 Or build from source:
 
 ```bash
-git clone https://github.com/dmitriy/promptkit.git
-cd promptkit
+git clone https://github.com/Sumatoshi-tech/prompts.git
+cd prompts
 make install
 ```
 
@@ -59,10 +59,10 @@ my-project/
   AGENTS.md                # Agent personality and development workflow
   .golangci.yml            # Linter config (ecosystem-specific)
   Makefile                 # Build, test, lint targets
+  .agents/instructions/   # Instruction sources + workflow templates (FRD or journey outline)
   .agents/skills/          # Agent Skills (cross-agent standard)
-    implement/SKILL.md     # /implement — TDD implementation workflow
+    implement/SKILL.md     # /implement — TDD + copy/fill FRD or journey template
     roadmap/SKILL.md       # /roadmap — Spec decomposition
-    frd/SKILL.md           # /frd or /journey — Feature requirements
     perf/SKILL.md          # /perf — Performance diagnosis
 ```
 
@@ -87,8 +87,8 @@ Set with `--ecosystem` at init time or `ecosystem:` in config.
 
 Two development methodologies are available:
 
-- **`frd`** (default) — spec -> `/roadmap` -> `/frd` -> `/implement` -> `/perf`. Each roadmap item gets a Feature Requirements Document (MoSCoW, stressor scenarios, test matrix).
-- **`journey`** — spec -> `/roadmap` -> `/journey` -> `/implement` -> `/perf`. Each roadmap item gets a journey document (CJM with phases, friction analysis, UX assessment).
+- **`frd`** (default) — spec -> `/roadmap` -> `/implement` -> `/perf`. Each roadmap item: `/implement` fills `specs/frds/FRD-{id}.md` using `.agents/instructions/instr-frd.md` as the section outline (MoSCoW, stressors, test matrix).
+- **`journey`** — same skills; each item uses `.agents/instructions/instr-journey.md` to author `specs/journeys/JOURNEY-{id}.md` (CJM, friction, UX assessment).
 
 Set with `--workflow` at init time or `workflow:` in config. See [Workflows](docs/workflows.md) for details.
 

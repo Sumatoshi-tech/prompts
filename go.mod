@@ -1,4 +1,4 @@
-module github.com/Sumatoshi-tech/promptkit
+module github.com/Sumatoshi-tech/prompts
 
 go 1.25.0
 

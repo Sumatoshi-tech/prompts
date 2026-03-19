@@ -69,8 +69,8 @@ var ValidWorkflows = map[string]bool{
 
 // WorkflowDescriptions provides human-readable descriptions for each workflow.
 var WorkflowDescriptions = map[string]string{
-	WorkflowFRD:     "FRD-based — spec -> /roadmap -> /frd -> /implement -> /perf",
-	WorkflowJourney: "Journey-based — spec -> /roadmap -> /journey -> /implement -> /perf",
+	WorkflowFRD:     "FRD-based — spec -> /roadmap -> /implement (uses .agents/instructions/instr-frd.md per item) -> /perf",
+	WorkflowJourney: "Journey-based — spec -> /roadmap -> /implement (uses .agents/instructions/instr-journey.md per item) -> /perf",
 }
 
 // ValidWorkflowNames returns a sorted list of valid workflow names.

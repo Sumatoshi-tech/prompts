@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/Sumatoshi-tech/promptkit/internal/config"
+	"github.com/Sumatoshi-tech/prompts/internal/config"
 )
 
 // parseAgents tests (existing).

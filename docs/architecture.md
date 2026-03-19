@@ -58,7 +58,7 @@ The adapter layer transforms shared instruction templates into agent-specific fi
 - **Gemini CLI**: `GEMINI.md` + `.gemini/commands/<skill>.toml`
 - **Windsurf**: `.windsurfrules` + `.windsurf/workflows/<skill>.md`
 
-Skills are workflow-aware: the FRD workflow includes `/frd`, the journey workflow includes `/journey`. Base skills (`/implement`, `/roadmap`, `/perf`) are present in both.
+Skills are workflow-aware only in text: `instr-implement.md` and `AGENTS.md` reference either FRD or journey artifacts. Base skills are `/implement`, `/roadmap`, and `/perf`. `instr-frd.md` / `instr-journey.md` remain as files under `.agents/instructions/` (one per project), not as Agent Skills.
 
 ## Safety Model
 

@@ -89,12 +89,12 @@ func init() {
 		FieldEntries: []FieldEntry{
 			{
 				Key:         "zig_version",
-				Files:       []string{"AGENTS.md", "instructions/instr-implement.md", "instructions/instr-roadmaper.md"},
+				Files:       []string{"AGENTS.md", ".agents/instructions/instr-implement.md", ".agents/instructions/instr-roadmaper.md"},
 				Description: "Zig version for build configuration",
 			},
 			{
 				Key:         "link_libc",
-				Files:       []string{"AGENTS.md", "Makefile", "instructions/instr-perf.md"},
+				Files:       []string{"AGENTS.md", "Makefile", ".agents/instructions/instr-perf.md"},
 				Description: "Link libc for C interop",
 			},
 		},

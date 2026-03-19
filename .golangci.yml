@@ -37,7 +37,7 @@ formatters:
   settings:
     goimports:
       local-prefixes:
-        - github.com/Sumatoshi-tech/promptkit
+        - github.com/Sumatoshi-tech/prompts
 
 linters:
   # Enable ALL linters, only disable what's truly inapplicable.
@@ -422,7 +422,7 @@ linters:
         - .WithMessagef(
         - .WithStack(
       ignore-package-globs:
-        - github.com/Sumatoshi-tech/promptkit/*
+        - github.com/Sumatoshi-tech/prompts/*
 
     wsl_v5: {}
 

@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	promptkit "github.com/Sumatoshi-tech/promptkit"
-	"github.com/Sumatoshi-tech/promptkit/internal/config"
-	"github.com/Sumatoshi-tech/promptkit/internal/scaffold"
+	promptkit "github.com/Sumatoshi-tech/prompts"
+	"github.com/Sumatoshi-tech/prompts/internal/config"
+	"github.com/Sumatoshi-tech/prompts/internal/scaffold"
 )
 
 func TestRenderAllTemplates(t *testing.T) {
@@ -49,10 +49,10 @@ func TestRenderAllTemplates(t *testing.T) {
 		".golangci.yml",
 		"Makefile",
 		"scripts/deadcode-filter.sh",
-		"instructions/instr-implement.md",
-		"instructions/instr-roadmaper.md",
-		"instructions/instr-frd.md",
-		"instructions/instr-perf.md",
+		".agents/instructions/instr-implement.md",
+		".agents/instructions/instr-roadmaper.md",
+		".agents/instructions/instr-frd.md",
+		".agents/instructions/instr-perf.md",
 	}
 
 	for _, name := range expectedFiles {
@@ -189,7 +189,7 @@ func TestRenderAllTemplates_CGOEnabled(t *testing.T) {
 	}
 
 	// Perf instructions should contain CGO sections.
-	perf := string(result["instructions/instr-perf.md"])
+	perf := string(result[".agents/instructions/instr-perf.md"])
 	if !strings.Contains(perf, "cgo") && !strings.Contains(perf, "CGO") {
 		t.Error("perf instructions should contain CGO guidance when enabled")
 	}
@@ -274,11 +274,10 @@ func TestRenderFull_Claude(t *testing.T) {
 		t.Fatalf("RenderFull() error: %v", err)
 	}
 
-	// Should have Agent Skills SKILL.md files.
+	// Should have Agent Skills SKILL.md files (FRD outline stays under .agents/instructions/).
 	expectedSkills := []string{
 		".agents/skills/implement/SKILL.md",
 		".agents/skills/roadmap/SKILL.md",
-		".agents/skills/frd/SKILL.md",
 		".agents/skills/perf/SKILL.md",
 	}
 
@@ -295,23 +294,26 @@ func TestRenderFull_Claude(t *testing.T) {
 	}
 
 	// Should have Claude legacy commands.
-	for _, name := range []string{"implement", "roadmap", "frd", "perf"} {
+	for _, name := range []string{"implement", "roadmap", "perf"} {
 		path := ".claude/commands/" + name + ".md"
 		if _, ok := result[path]; !ok {
 			t.Errorf("missing Claude command: %s", path)
 		}
 	}
 
-	// Raw instructions should NOT be in the output.
+	// Skill-backed raw instructions removed; FRD template remains.
 	for _, path := range []string{
-		"instructions/instr-implement.md",
-		"instructions/instr-roadmaper.md",
-		"instructions/instr-frd.md",
-		"instructions/instr-perf.md",
+		".agents/instructions/instr-implement.md",
+		".agents/instructions/instr-roadmaper.md",
+		".agents/instructions/instr-perf.md",
 	} {
 		if _, ok := result[path]; ok {
-			t.Errorf("raw instruction file should be removed: %s", path)
+			t.Errorf("skill instruction file should be removed: %s", path)
 		}
+	}
+
+	if _, ok := result[".agents/instructions/instr-frd.md"]; !ok {
+		t.Error("expected .agents/instructions/instr-frd.md in output for frd workflow")
 	}
 
 	// Non-instruction files should still be present.
@@ -461,10 +463,10 @@ func TestRenderAllTemplates_RustEcosystem(t *testing.T) {
 		"clippy.toml",
 		"rustfmt.toml",
 		"Makefile",
-		"instructions/instr-implement.md",
-		"instructions/instr-roadmaper.md",
-		"instructions/instr-frd.md",
-		"instructions/instr-perf.md",
+		".agents/instructions/instr-implement.md",
+		".agents/instructions/instr-roadmaper.md",
+		".agents/instructions/instr-frd.md",
+		".agents/instructions/instr-perf.md",
 	}
 
 	for _, name := range expectedFiles {
@@ -552,10 +554,10 @@ func TestRenderAllTemplates_ZigEcosystem(t *testing.T) {
 	expectedFiles := []string{
 		"AGENTS.md",
 		"Makefile",
-		"instructions/instr-implement.md",
-		"instructions/instr-roadmaper.md",
-		"instructions/instr-frd.md",
-		"instructions/instr-perf.md",
+		".agents/instructions/instr-implement.md",
+		".agents/instructions/instr-roadmaper.md",
+		".agents/instructions/instr-frd.md",
+		".agents/instructions/instr-perf.md",
 	}
 
 	for _, name := range expectedFiles {
@@ -686,26 +688,32 @@ func TestRenderFull_JourneyWorkflow_Golang(t *testing.T) {
 		t.Fatalf("RenderFull() error: %v", err)
 	}
 
-	// Journey skill should be present, FRD should not.
-	hasJourney := false
-	hasFRD := false
+	// Journey template on disk; no journey/frd Agent Skills.
+	hasJourneyTemplate := false
+	hasFRDSkill := false
 
 	for path := range rendered {
-		if strings.Contains(path, "journey") {
-			hasJourney = true
+		if path == ".agents/instructions/instr-journey.md" {
+			hasJourneyTemplate = true
 		}
 
-		if strings.Contains(path, "/frd/") || strings.HasSuffix(path, "/frd.md") || strings.HasSuffix(path, "/frd.toml") {
-			hasFRD = true
+		if path == ".agents/skills/frd/SKILL.md" ||
+			path == ".claude/commands/frd.md" ||
+			strings.HasSuffix(path, ".gemini/commands/frd.toml") {
+			hasFRDSkill = true
 		}
 	}
 
-	if !hasJourney {
-		t.Error("journey workflow should produce journey skill files")
+	if !hasJourneyTemplate {
+		t.Error("journey workflow should ship .agents/instructions/instr-journey.md")
 	}
 
-	if hasFRD {
-		t.Error("journey workflow should not produce frd skill files")
+	if hasFRDSkill {
+		t.Error("journey workflow should not produce frd skill or command files")
+	}
+
+	if _, ok := rendered[".agents/instructions/instr-frd.md"]; ok {
+		t.Error("journey workflow should not ship .agents/instructions/instr-frd.md")
 	}
 
 	// Implement skill should reference journey, not FRD.
@@ -743,24 +751,30 @@ func TestRenderFull_JourneyWorkflow_Rust(t *testing.T) {
 		t.Fatalf("RenderFull() error: %v", err)
 	}
 
-	hasJourney := false
-	hasFRD := false
+	hasJourneyTemplate := false
+	hasFRDSkill := false
 
 	for path := range rendered {
-		if strings.Contains(path, "journey") {
-			hasJourney = true
+		if path == ".agents/instructions/instr-journey.md" {
+			hasJourneyTemplate = true
 		}
 
-		if strings.Contains(path, "/frd/") || strings.HasSuffix(path, "/frd.md") || strings.HasSuffix(path, "/frd.toml") {
-			hasFRD = true
+		if path == ".agents/skills/frd/SKILL.md" ||
+			path == ".claude/commands/frd.md" ||
+			strings.HasSuffix(path, ".gemini/commands/frd.toml") {
+			hasFRDSkill = true
 		}
 	}
 
-	if !hasJourney {
-		t.Error("rust journey workflow should produce journey skill files")
+	if !hasJourneyTemplate {
+		t.Error("rust journey workflow should ship .agents/instructions/instr-journey.md")
 	}
 
-	if hasFRD {
-		t.Error("rust journey workflow should not produce frd skill files")
+	if hasFRDSkill {
+		t.Error("rust journey workflow should not produce frd skill or command files")
+	}
+
+	if _, ok := rendered[".agents/instructions/instr-frd.md"]; ok {
+		t.Error("rust journey workflow should not ship .agents/instructions/instr-frd.md")
 	}
 }

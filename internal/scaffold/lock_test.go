@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Sumatoshi-tech/promptkit/internal/scaffold"
+	"github.com/Sumatoshi-tech/prompts/internal/scaffold"
 )
 
 func TestAcquireLock_Success(t *testing.T) {
