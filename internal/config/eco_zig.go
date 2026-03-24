@@ -15,6 +15,7 @@ func init() {
 	RegisterEcosystem(&EcosystemModule{
 		Name:               EcosystemZig,
 		Description:        "Zig — build.zig, zig test, zig fmt",
+		RequiredFields:     []string{"zig_version"},
 		DefaultAnalysisCmd: "zig build test",
 
 		DefaultCmdPath: func(_ string) string {

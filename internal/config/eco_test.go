@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/spf13/cobra"
@@ -100,10 +101,6 @@ func TestEcoRegistry_AllModulesHaveRequiredFields(t *testing.T) {
 			t.Errorf("module %q: ApplyDefaults is nil", mod.Name)
 		}
 
-		if mod.Validate == nil {
-			t.Errorf("module %q: Validate is nil", mod.Name)
-		}
-
 		if mod.RegisterFlags == nil {
 			t.Errorf("module %q: RegisterFlags is nil", mod.Name)
 		}
@@ -179,29 +176,53 @@ func TestGolang_ApplyDefaults(t *testing.T) {
 	}
 }
 
-func TestGolang_Validate_RequiresGoVersion(t *testing.T) {
+func TestGolang_RequiredFields(t *testing.T) {
 	t.Parallel()
 
-	cfg := &Config{GoVersion: ""}
-	errs := GetEcosystem("golang").Validate(cfg)
-
-	if len(errs) != 1 {
-		t.Fatalf("golang.Validate: got %d errors, want 1", len(errs))
+	mod := GetEcosystem("golang")
+	if !mod.Requires("module_path") {
+		t.Error("golang should require module_path")
 	}
 
-	if errs[0].Error() != "go_version is required for golang ecosystem (e.g. \"1.22\")" {
-		t.Errorf("golang.Validate: error = %q", errs[0])
+	if !mod.Requires("go_version") {
+		t.Error("golang should require go_version")
+	}
+
+	if mod.Requires("description") {
+		t.Error("golang should not require description")
+	}
+}
+
+func TestGolang_Validate_MissingGoVersion(t *testing.T) {
+	t.Parallel()
+
+	cfg := Default()
+	cfg.ProjectName = "test"
+	cfg.ModulePath = "github.com/test/project"
+	cfg.GoVersion = ""
+	cfg.Binaries = []Binary{{Name: "test", CmdPath: "./cmd/test"}}
+
+	err := cfg.Validate()
+	if err == nil {
+		t.Fatal("expected validation error for missing go_version")
+	}
+
+	if !strings.Contains(err.Error(), "go_version is required") {
+		t.Errorf("error should mention go_version, got: %s", err)
 	}
 }
 
 func TestGolang_Validate_Valid(t *testing.T) {
 	t.Parallel()
 
-	cfg := &Config{GoVersion: "1.22"}
-	errs := GetEcosystem("golang").Validate(cfg)
+	cfg := Default()
+	cfg.ProjectName = "test"
+	cfg.ModulePath = "github.com/test/project"
+	cfg.GoVersion = "1.22"
+	cfg.Binaries = []Binary{{Name: "test", CmdPath: "./cmd/test"}}
 
-	if len(errs) != 0 {
-		t.Errorf("golang.Validate: got %d errors, want 0: %v", len(errs), errs)
+	if err := cfg.Validate(); err != nil {
+		t.Errorf("expected no error, got: %v", err)
 	}
 }
 
@@ -258,14 +279,32 @@ func TestRust_ApplyDefaults(t *testing.T) {
 	}
 }
 
+func TestRust_RequiredFields(t *testing.T) {
+	t.Parallel()
+
+	mod := GetEcosystem("rust")
+	if !mod.Requires("rust_edition") {
+		t.Error("rust should require rust_edition")
+	}
+}
+
 func TestRust_Validate_RequiresEdition(t *testing.T) {
 	t.Parallel()
 
-	cfg := &Config{RustEdition: "", UnsafePolicy: "deny"}
-	errs := GetEcosystem("rust").Validate(cfg)
+	cfg := Default()
+	cfg.Ecosystem = "rust"
+	cfg.ProjectName = "test"
+	cfg.RustEdition = ""
+	cfg.UnsafePolicy = "deny"
+	cfg.Binaries = []Binary{{Name: "test", CmdPath: "src/main.rs"}}
 
-	if len(errs) == 0 {
-		t.Fatal("rust.Validate: expected error for empty RustEdition")
+	err := cfg.Validate()
+	if err == nil {
+		t.Fatal("expected validation error for empty RustEdition")
+	}
+
+	if !strings.Contains(err.Error(), "rust_edition is required") {
+		t.Errorf("error should mention rust_edition, got: %s", err)
 	}
 }
 
@@ -348,6 +387,15 @@ func TestZig_ApplyDefaults(t *testing.T) {
 
 	if cfg.AnalysisCmd != "zig build test" {
 		t.Errorf("zig.ApplyDefaults: AnalysisCmd = %q", cfg.AnalysisCmd)
+	}
+}
+
+func TestZig_RequiredFields(t *testing.T) {
+	t.Parallel()
+
+	mod := GetEcosystem("zig")
+	if !mod.Requires("zig_version") {
+		t.Error("zig should require zig_version")
 	}
 }
 

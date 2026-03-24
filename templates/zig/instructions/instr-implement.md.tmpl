@@ -1,0 +1,40 @@
+{{define "impl_identity"}}
+You are experienced {{.IdentityYrs}}+ years Zig developer, that also 10+ years works on AI agents and knows all ai agent patterns. You respect SOLID, DRY, KISS, clean architecture and idiomatic Zig. You respect Zig project structure and standards{{- if .ZigVersion}} and always write Zig {{.ZigVersion}} code{{end}}
+{{- end}}
+
+{{define "impl_linter_step"}}
+3. Read all docs in docs/ & understand build.zig configuration to write code correctly
+{{- end}}
+
+{{define "impl_libs_step"}}
+7. Write implementation. Prefer Zig standard library. Use third-party packages only when justified.
+{{- end}}
+
+{{define "impl_default_analysis"}}
+8. Analyze code with `zig build test`
+{{- end}}
+
+{{define "impl_lint_warning"}}
+10. Do your best for fixing code by that analysis. No compiler warnings or dead code should present!!
+{{- end}}
+
+{{define "impl_test_infra"}}
+1. Look for `test` blocks in source files
+2. Look for a `tests/` directory with integration tests
+3. Look for existing test helper functions
+
+When writing tests:
+- Use `std.testing.allocator` to detect memory leaks
+- Use `std.testing.expect*` functions for assertions
+- Group related tests in the same file near the code they test
+- For external dependencies, prefer comptime interfaces + test doubles
+- Never mock what you don't own — wrap external dependencies in an interface first
+{{- end}}
+
+{{define "impl_tdd_lang"}}
+* Codebase language: Zig
+{{- end}}
+
+{{define "impl_proptest"}}
+* Property-based tests are not idiomatic in Zig — prefer explicit example-based tests.
+{{- end}}

@@ -25,6 +25,9 @@ import (
 
 const tmplSuffix = ".tmpl"
 
+// SharedTemplateDir is the directory for templates shared across all ecosystems.
+const SharedTemplateDir = "templates/_shared"
+
 // TemplateDirForEcosystem returns the template directory path for the given ecosystem.
 func TemplateDirForEcosystem(ecosystem string) string {
 	return "templates/" + ecosystem
@@ -50,22 +53,44 @@ type FileDiff struct {
 
 // Render processes all templates from the given filesystem using the provided config.
 // It returns a map of relative output paths to rendered content.
+//
+// Template resolution order:
+//  1. Ecosystem-specific templates (templates/<ecosystem>/) are rendered first.
+//  2. Shared templates (templates/_shared/) fill gaps — any output path not already
+//     provided by the ecosystem gets rendered from the shared directory.
+//  3. When both exist for the same output path, the ecosystem template is used.
+//     If the ecosystem template contains only {{define}} blocks (for overriding
+//     shared {{block}} directives), use renderComposed to layer them.
 func Render(cfg *config.Config, tmplFS fs.FS) (map[string][]byte, error) {
 	result := make(map[string][]byte)
 	tmplDir := TemplateDirForEcosystem(cfg.Ecosystem)
 
-	err := fs.WalkDir(tmplFS, tmplDir, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
+	// Load shared templates.
+	shared, err := loadSharedTemplates(tmplFS)
+	if err != nil {
+		return nil, err
+	}
+
+	// Track which output paths the ecosystem provides.
+	ecoProvided := make(map[string]bool)
+
+	err = fs.WalkDir(tmplFS, tmplDir, func(path string, d fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			// Ecosystem dir may not exist if all templates are in _shared.
+			if path == tmplDir {
+				return fs.SkipDir
+			}
+
+			return walkErr
 		}
 
 		if d.IsDir() {
 			return nil
 		}
 
-		data, err := fs.ReadFile(tmplFS, path)
-		if err != nil {
-			return fmt.Errorf("reading template %s: %w", path, err)
+		data, readErr := fs.ReadFile(tmplFS, path)
+		if readErr != nil {
+			return fmt.Errorf("reading template %s: %w", path, readErr)
 		}
 
 		// Strip the template directory prefix to get the output path.
@@ -74,16 +99,27 @@ func Render(cfg *config.Config, tmplFS fs.FS) (map[string][]byte, error) {
 		// If it's a .tmpl file, render it; otherwise copy as-is.
 		if trimmed, ok := strings.CutSuffix(outPath, tmplSuffix); ok {
 			outPath = trimmed
+			ecoProvided[outPath] = true
 
-			var rendered []byte
+			// Check if a shared base exists for composition.
+			sharedKey := outPath + tmplSuffix
+			if sharedData, hasShared := shared[sharedKey]; hasShared {
+				rendered, renderErr := renderComposed(path, sharedData, data, cfg)
+				if renderErr != nil {
+					return fmt.Errorf("rendering composed %s: %w", path, renderErr)
+				}
 
-			rendered, err = renderTemplate(path, string(data), cfg)
-			if err != nil {
-				return fmt.Errorf("rendering %s: %w", path, err)
+				result[outPath] = rendered
+			} else {
+				rendered, renderErr := renderTemplate(path, string(data), cfg)
+				if renderErr != nil {
+					return fmt.Errorf("rendering %s: %w", path, renderErr)
+				}
+
+				result[outPath] = rendered
 			}
-
-			result[outPath] = rendered
 		} else {
+			ecoProvided[outPath] = true
 			result[outPath] = data
 		}
 
@@ -93,10 +129,34 @@ func Render(cfg *config.Config, tmplFS fs.FS) (map[string][]byte, error) {
 		return nil, fmt.Errorf("walking templates: %w", err)
 	}
 
+	// Render shared templates not overridden by ecosystem.
+	for relPath, data := range shared {
+		outPath := relPath
+		if trimmed, ok := strings.CutSuffix(outPath, tmplSuffix); ok {
+			outPath = trimmed
+		}
+
+		if ecoProvided[outPath] {
+			continue
+		}
+
+		if strings.HasSuffix(relPath, tmplSuffix) {
+			rendered, renderErr := renderTemplate(SharedTemplateDir+"/"+relPath, string(data), cfg)
+			if renderErr != nil {
+				return nil, fmt.Errorf("rendering shared %s: %w", relPath, renderErr)
+			}
+
+			result[outPath] = rendered
+		} else {
+			result[outPath] = data
+		}
+	}
+
 	return result, nil
 }
 
 // RenderWithOverrides renders templates, preferring local overrides over embedded ones.
+// Priority order: local overrides > ecosystem templates > shared templates.
 func RenderWithOverrides(cfg *config.Config, tmplFS fs.FS, overrideDir string) (map[string][]byte, error) {
 	result, err := Render(cfg, tmplFS)
 	if err != nil {
@@ -405,7 +465,7 @@ func provenanceComment(path string) string {
 }
 
 // RenderSingle renders a single template by output name (e.g. "AGENTS.md").
-// It checks the override directory first, then embedded templates.
+// Resolution order: override directory > ecosystem templates > shared templates.
 func RenderSingle(cfg *config.Config, tmplFS fs.FS, overrideDir, name string) ([]byte, error) {
 	// Check override directory first.
 	if overrideDir != "" {
@@ -424,38 +484,57 @@ func RenderSingle(cfg *config.Config, tmplFS fs.FS, overrideDir, name string) ([
 
 	tmplDir := TemplateDirForEcosystem(cfg.Ecosystem)
 
-	// Check embedded templates (.tmpl files).
+	// Check embedded ecosystem templates (.tmpl files).
 	tmplPath := tmplDir + "/" + name + tmplSuffix
 
 	data, err := fs.ReadFile(tmplFS, tmplPath)
-	if err != nil {
-		// Try without .tmpl suffix (static files).
-		staticPath := tmplDir + "/" + name
-
-		data, err = fs.ReadFile(tmplFS, staticPath)
-		if err != nil {
-			return nil, fmt.Errorf("template %q not found", name)
+	if err == nil {
+		rendered, renderErr := renderTemplate(tmplPath, string(data), cfg)
+		if renderErr != nil {
+			return nil, fmt.Errorf("rendering %s: %w", name, renderErr)
 		}
 
+		return rendered, nil
+	}
+
+	// Try ecosystem static file.
+	staticPath := tmplDir + "/" + name
+
+	data, err = fs.ReadFile(tmplFS, staticPath)
+	if err == nil {
 		return data, nil
 	}
 
-	rendered, err := renderTemplate(tmplPath, string(data), cfg)
-	if err != nil {
-		return nil, fmt.Errorf("rendering %s: %w", name, err)
+	// Fall back to shared templates.
+	sharedTmplPath := SharedTemplateDir + "/" + name + tmplSuffix
+
+	data, err = fs.ReadFile(tmplFS, sharedTmplPath)
+	if err == nil {
+		rendered, renderErr := renderTemplate(sharedTmplPath, string(data), cfg)
+		if renderErr != nil {
+			return nil, fmt.Errorf("rendering shared %s: %w", name, renderErr)
+		}
+
+		return rendered, nil
 	}
 
-	return rendered, nil
+	// Try shared static file.
+	sharedStaticPath := SharedTemplateDir + "/" + name
+
+	data, err = fs.ReadFile(tmplFS, sharedStaticPath)
+	if err == nil {
+		return data, nil
+	}
+
+	return nil, fmt.Errorf("template %q not found", name)
 }
 
 func applyAgentAdapters(rendered map[string][]byte, agents []string, workflow string) (map[string][]byte, error) {
-	pruneInactiveWorkflowTemplates(rendered, workflow)
-
 	if len(agents) == 0 {
 		return rendered, nil
 	}
 
-	placed, err := adapters.PlaceForAgents(rendered, agents)
+	placed, err := adapters.PlaceForAgents(rendered, agents, workflow)
 	if err != nil {
 		return nil, fmt.Errorf("placing agent files: %w", err)
 	}
@@ -473,17 +552,6 @@ func applyAgentAdapters(rendered map[string][]byte, agents []string, workflow st
 	return rendered, nil
 }
 
-// pruneInactiveWorkflowTemplates drops the workflow template that does not
-// apply so only one of instr-frd.md / instr-journey.md is shipped.
-func pruneInactiveWorkflowTemplates(rendered map[string][]byte, workflow string) {
-	switch workflow {
-	case config.WorkflowJourney:
-		delete(rendered, adapters.InstrFRDPath)
-	default:
-		delete(rendered, adapters.InstrJourneyPath)
-	}
-}
-
 func newTemplateFuncMap() template.FuncMap {
 	return template.FuncMap{
 		"join":  strings.Join,
@@ -491,6 +559,68 @@ func newTemplateFuncMap() template.FuncMap {
 		"lower": strings.ToLower,
 		"title": cases.Title(language.English).String,
 	}
+}
+
+// loadSharedTemplates reads all templates from templates/_shared/ into a map
+// keyed by relative path (e.g. "instructions/instr-frd.md.tmpl").
+// Returns an empty map (not an error) if the _shared directory does not exist.
+func loadSharedTemplates(tmplFS fs.FS) (map[string][]byte, error) {
+	shared := make(map[string][]byte)
+
+	err := fs.WalkDir(tmplFS, SharedTemplateDir, func(path string, d fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			// _shared dir may not exist — that is fine for backwards compat.
+			if path == SharedTemplateDir {
+				return fs.SkipDir
+			}
+
+			return walkErr
+		}
+
+		if d.IsDir() {
+			return nil
+		}
+
+		data, readErr := fs.ReadFile(tmplFS, path)
+		if readErr != nil {
+			return fmt.Errorf("reading shared template %s: %w", path, readErr)
+		}
+
+		relPath := strings.TrimPrefix(path, SharedTemplateDir+"/")
+		shared[relPath] = data
+
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("walking shared templates: %w", err)
+	}
+
+	return shared, nil
+}
+
+// renderComposed layers an ecosystem template on top of a shared base template.
+// The shared template defines the structure using {{block "name" .}}default{{end}}
+// directives. The ecosystem template overrides specific blocks via {{define "name"}}.
+// Parse order: shared first (defines defaults), ecosystem second (overrides).
+func renderComposed(name string, sharedData, ecoData []byte, cfg *config.Config) ([]byte, error) {
+	funcMap := newTemplateFuncMap()
+	tmpl := template.New(name).Funcs(funcMap)
+
+	if _, err := tmpl.Parse(string(sharedData)); err != nil {
+		return nil, fmt.Errorf("parsing shared base: %w", err)
+	}
+
+	if _, err := tmpl.Parse(string(ecoData)); err != nil {
+		return nil, fmt.Errorf("parsing ecosystem override: %w", err)
+	}
+
+	var buf bytes.Buffer
+
+	if err := tmpl.Execute(&buf, cfg); err != nil {
+		return nil, fmt.Errorf("executing composed template: %w", err)
+	}
+
+	return buf.Bytes(), nil
 }
 
 func renderTemplate(name, text string, cfg *config.Config) ([]byte, error) {
@@ -906,7 +1036,14 @@ func CheckOverrideStaleness(tmplFS fs.FS, overrideDir, ecosystem string) []strin
 			// Try static file.
 			data, err = fs.ReadFile(tmplFS, tmplDir+"/"+tmplName)
 			if err != nil {
-				continue
+				// Try shared template.
+				data, err = fs.ReadFile(tmplFS, SharedTemplateDir+"/"+tmplName+".tmpl")
+				if err != nil {
+					data, err = fs.ReadFile(tmplFS, SharedTemplateDir+"/"+tmplName)
+					if err != nil {
+						continue
+					}
+				}
 			}
 		}
 

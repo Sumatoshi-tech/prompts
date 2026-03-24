@@ -23,6 +23,21 @@ func gatherConfig(cfg *config.Config, defaultName string, in io.Reader, out io.W
 		return ask(reader, out, prompt, defaultVal)
 	}
 
+	askRequiredFn := func(prompt, defaultVal string) (string, error) {
+		for {
+			val, err := ask(reader, out, prompt, defaultVal)
+			if err != nil {
+				return "", err
+			}
+
+			if val != "" {
+				return val, nil
+			}
+
+			fmt.Fprintf(out, "  %s is required, please provide a value.\n", prompt)
+		}
+	}
+
 	askBoolFn := func(prompt string, defaultVal bool) (bool, error) {
 		return askBool(reader, out, prompt, defaultVal)
 	}
@@ -49,12 +64,17 @@ func gatherConfig(cfg *config.Config, defaultName string, in io.Reader, out io.W
 
 	mod := config.GetEcosystem(cfg.Ecosystem)
 
-	cfg.ProjectName, err = askFn("Project name", defaultName)
+	cfg.ProjectName, err = askRequiredFn("Project name", defaultName)
 	if err != nil {
 		return nil, err
 	}
 
-	cfg.ModulePath, err = askFn("Module path (e.g. github.com/user/project)", "")
+	askField := askFn
+	if mod != nil && mod.Requires("module_path") {
+		askField = askRequiredFn
+	}
+
+	cfg.ModulePath, err = askField("Module path (e.g. github.com/user/project)", "")
 	if err != nil {
 		return nil, err
 	}

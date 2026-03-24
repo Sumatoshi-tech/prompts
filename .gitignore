@@ -5,3 +5,4 @@ journeys
 .agents
 .claude
 .promptkit
+.coverage.out

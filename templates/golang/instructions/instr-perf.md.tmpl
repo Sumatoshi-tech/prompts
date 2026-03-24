@@ -1,13 +1,10 @@
+{{define "perf_title"}}
 # Agent Instructions: Go Performance Optimization
 
 You are a performance-focused systems agent. Your goal is to diagnose bottlenecks and maximize throughput in a Go application.
+{{- end}}
 
-You must **first diagnose** the bottleneck (waiting vs compute vs lock contention vs boundary overhead), then implement the architecture that matches the findings.
-
----
-
-## 1) Non-Negotiable Principles
-
+{{define "perf_principles"}}
 1. **Measure before optimizing** — never guess; always profile first.
 2. **Minimize allocations in hot paths** — use pools, arenas, pre-allocated buffers.
 3. **Separate I/O from compute** — I/O-bound and CPU-bound work scale differently.
@@ -16,26 +13,13 @@ You must **first diagnose** the bottleneck (waiting vs compute vs lock contentio
 5. **Minimize C<->Go crossings** — one cgo call should do a lot of work.
 6. **No C->Go callbacks in the hot path** — prefer pull model (Go calls C to fetch batches).
 {{- end}}
+{{- end}}
 
----
-
-## 2) Mandatory Phase 1: Symptom-Driven Diagnostics (Do This First)
-
-### 1.1 Establish a Reproducible Benchmark Harness
+{{define "perf_benchmark_tool"}}
 Create a deterministic benchmark run:
-- Fixed input data set
-- Warm-up run (discard)
-- Steady-state run (10-60s)
+{{- end}}
 
-Record:
-- ops/sec or items/sec
-- p50/p95/p99 latency
-- CPU utilization (total + per-core)
-- RSS / page faults (if available)
-
-**Acceptance:** results reproducible within +/-5-10%.
-
----
+{{define "perf_profiling"}}
 
 ### 1.2 Go Runtime Trace (Primary for blocking / scheduling issues)
 Capture a 10-30s `runtime/trace` under load and inspect with `go tool trace`.
@@ -74,12 +58,10 @@ Collect:
 - **GC heavy** = reduce allocations; use sync.Pool; compact results
 - **Channel heavy** = batch, shard queues, avoid per-item sends
 - **Mutex heavy** = sharding, per-worker state, remove global locks
+{{- end}}
 
----
-
-### 1.4 System-Level Profiling
-
-#### Linux: perf
+{{define "perf_sysprofile"}}
+#### Linux
 On Linux, run `perf top` or `perf record` against the process during steady-state.
 
 **What to look for:**
@@ -87,7 +69,7 @@ On Linux, run `perf top` or `perf record` against the process during steady-stat
 - `page_fault`, `do_page_fault`, `mmap`, `read`, `pread`: memory pressure / I/O bound
 - Heavy `memcpy` / `copy_user`: excessive copying between layers
 
-#### macOS: Instruments / DTrace
+#### macOS
 On macOS, use Instruments.app or `dtrace` for system-level profiling:
 - `instruments -t "Time Profiler" -p <pid>` for CPU sampling
 - `sudo dtrace -n 'profile-997 /pid == $target/ { @[ustack()] = count(); }'` for stack sampling
@@ -104,6 +86,9 @@ On macOS, use Instruments.app or `dtrace` for system-level profiling:
 - **futex/pthread_mutex heavy** = threading not scaling due to locks; shard or reduce shared state
 - **page faults / read heavy** = I/O or mmap locality issue; group by locality; prefetch
 - **memcpy heavy** = enforce zero-copy layouts
+{{- end}}
+
+{{define "perf_os_counters"}}
 
 ---
 
@@ -126,10 +111,11 @@ Capture at least one of:
 - High disk await/util = storage bound
 - High context switches + futex/pthread = lock contention
 - High minor/major faults = mmap/page cache churn
+{{- end}}
 
----
+{{define "perf_classification"}} 1.6 {{- end}}
 
-### 1.6 Classification: Decide Bottleneck Class
+{{define "perf_classes"}}
 After 1.2-1.5, classify into ONE primary bottleneck:
 
 **Class A -- Boundary overhead**
@@ -154,12 +140,9 @@ After 1.2-1.5, classify into ONE primary bottleneck:
 
 **Class E -- GC/allocation bound**
 - runtime malloc/GC prominent; increasing workers worsens tail latencies
+{{- end}}
 
-Write a short diagnosis note mapping evidence to class.
-
----
-
-## 3) Mandatory Phase 2: Apply Architecture Pattern Matching Diagnosis
+{{define "perf_architecture"}}
 
 ### 2.1 If Class A (Boundary overhead): Batch Operations
 {{- if .Features.CGO}}
@@ -195,8 +178,9 @@ Write a short diagnosis note mapping evidence to class.
 - Use `sync.Pool` for frequently allocated objects.
 - Eliminate per-item allocations; avoid building strings in hot paths.
 - Consider `arena` package for batch allocations (Go 1.20+, experimental).
+{{- end}}
 
----
+{{define "perf_code_patterns"}}
 
 ## 4) Common Go Performance Patterns
 
@@ -260,12 +244,9 @@ ptr := C.malloc(C.size_t(size))
 defer C.free(ptr)
 ```
 {{- end}}
+{{- end}}
 
----
-
-## 5) Performance Traps (Must Not Do)
-
-- No premature optimization without profiling evidence.
+{{define "perf_traps"}}
 - No per-item allocations in hot loops.
 - No single global mutex-protected cache in hot loops.
 - No unbounded goroutine creation.
@@ -275,16 +256,9 @@ defer C.free(ptr)
 - No tiny cgo calls (amortize overhead).
 - No C->Go callbacks per item.
 {{- end}}
+{{- end}}
 
----
-
-## 6) Deliverables
-
-You must output:
-1. Diagnosis summary (evidence -> bottleneck class).
-2. Specific optimization plan with expected impact.
+{{define "perf_deliverables"}}
 3. Benchmark before/after comparison.
 4. Concurrency design (if applicable): stages, queues, ownership.
-5. Success metrics and how they are measured.
-
-If diagnosis is missing, the design is considered incomplete.
+{{- end}}

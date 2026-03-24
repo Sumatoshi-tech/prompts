@@ -1,0 +1,9 @@
+{{define "gen_scan_files"}}Scan all `*.go` files excluding `*_test.go`.{{end}}
+{{define "gen_criteria_ab"}}
+- **(a) Cross-package potential** — it does something that could be needed in other packages if we generalize the function signature.
+- **(b) Already generic** — it is already mostly generic; to make it fully generic we just have to rewrite it with Go generics (`type parameters`).
+{{- end}}
+{{define "gen_list_term"}}package{{end}}
+{{define "gen_generics_focus"}}
+4. **Generics focus** — when criterion (b) applies, note which type parameters would be needed.
+{{- end}}

@@ -1,13 +1,10 @@
+{{define "perf_title"}}
 # Agent Instructions: Zig Performance Optimization
 
 You are a performance-focused systems agent. Your goal is to diagnose bottlenecks and maximize throughput in a Zig application.
+{{- end}}
 
-You must **first diagnose** the bottleneck (waiting vs compute vs lock contention vs allocation overhead), then implement the architecture that matches the findings.
-
----
-
-## 1) Non-Negotiable Principles
-
+{{define "perf_principles"}}
 1. **Measure before optimizing** — never guess; always profile first.
 2. **Minimize allocations in hot paths** — use stack buffers, fixed-size arrays, arena allocators.
 3. **Separate I/O from compute** — I/O-bound and CPU-bound work scale differently.
@@ -16,26 +13,13 @@ You must **first diagnose** the bottleneck (waiting vs compute vs lock contentio
 {{- if .LinkLibc}}
 6. **Minimize FFI crossings** — one C call should do a lot of work.
 {{- end}}
+{{- end}}
 
----
-
-## 2) Mandatory Phase 1: Symptom-Driven Diagnostics (Do This First)
-
-### 1.1 Establish a Reproducible Benchmark Harness
+{{define "perf_benchmark_tool"}}
 Create a deterministic benchmark:
-- Fixed input data set
-- Warm-up run (discard)
-- Steady-state run (10-60s)
+{{- end}}
 
-Record:
-- ops/sec or items/sec
-- p50/p95/p99 latency
-- CPU utilization (total + per-core)
-- RSS / page faults
-
-**Acceptance:** results reproducible within +/-5-10%.
-
----
+{{define "perf_profiling"}}
 
 ### 1.2 Profiling with perf / Tracy
 Capture a profile under load:
@@ -76,11 +60,9 @@ Or use valgrind/heaptrack:
 ```bash
 valgrind --tool=massif ./zig-out/bin/{{.ProjectName}}
 ```
+{{- end}}
 
----
-
-### 1.4 System-Level Profiling
-
+{{define "perf_sysprofile"}}
 #### Linux
 - `perf stat` for hardware counters (cycles, cache misses, branches)
 - `iostat -x 1` / `pidstat -d 1` for disk I/O
@@ -90,10 +72,13 @@ valgrind --tool=massif ./zig-out/bin/{{.ProjectName}}
 - `instruments -t "Time Profiler"` for CPU sampling
 - `vm_stat 1` for page faults
 - `fs_usage -w <pid>` for filesystem activity
+{{- end}}
 
----
+{{define "perf_os_counters"}}{{end}}
 
-### 1.5 Classification: Decide Bottleneck Class
+{{define "perf_classification"}} 1.5 {{- end}}
+
+{{define "perf_classes"}}
 
 **Class A -- Allocation bound**
 - Allocator functions dominate; many small allocs in hot path
@@ -109,12 +94,9 @@ valgrind --tool=massif ./zig-out/bin/{{.ProjectName}}
 
 **Class E -- Cache/memory bound**
 - High cache miss rate; data layout not cache-friendly
+{{- end}}
 
-Write a short diagnosis note mapping evidence to class.
-
----
-
-## 3) Mandatory Phase 2: Apply Architecture Pattern Matching Diagnosis
+{{define "perf_architecture"}}
 
 ### 2.1 If Class A (Allocation bound): Arena + Stack + Pool
 - Use `std.heap.ArenaAllocator` for batch allocations
@@ -143,8 +125,9 @@ Write a short diagnosis note mapping evidence to class.
 - Align data to cache lines
 - Group frequently accessed fields together
 - Use `@prefetch` for predictable access patterns
+{{- end}}
 
----
+{{define "perf_code_patterns"}}
 
 ## 4) Common Zig Performance Patterns
 
@@ -184,27 +167,17 @@ fn add_vectors(a: Vec4, b: Vec4) Vec4 {
     return a + b;
 }
 ```
+{{- end}}
 
----
-
-## 5) Performance Traps (Must Not Do)
-
-- No premature optimization without profiling evidence.
+{{define "perf_traps"}}
 - No heap allocation where stack allocation suffices.
 - No `std.fmt.allocPrint` in hot loops (reuse buffers).
 - No unbounded `ArrayList` growth without capacity hints.
 - No global mutex around data that can be per-thread.
 - No `anytype` in hot paths where concrete types enable better optimization.
+{{- end}}
 
----
-
-## 6) Deliverables
-
-You must output:
-1. Diagnosis summary (evidence -> bottleneck class).
-2. Specific optimization plan with expected impact.
+{{define "perf_deliverables"}}
 3. Benchmark before/after comparison.
 4. Concurrency design (if applicable): stages, thread pool, ownership.
-5. Success metrics and how they are measured.
-
-If diagnosis is missing, the design is considered incomplete.
+{{- end}}

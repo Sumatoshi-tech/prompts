@@ -61,7 +61,7 @@ func init() {
 var initCmd = &cobra.Command{
 	Use:   "init [project-dir]",
 	Short: "Initialize a new project with AI agent instructions",
-	Long: `Scaffolds a new Go project with AGENTS.md, .agents/instructions/,
+	Long: `Scaffolds a new Go project with AGENTS.md, instructions,
 Makefile, golangci-lint config, and helper scripts.
 
 If project-dir is omitted, the current directory is used.
@@ -273,7 +273,7 @@ func buildConfigFromFlags(cfg *config.Config, targetDir string) (*config.Config,
 
 // printFilesByAgent prints generated files grouped by agent ownership.
 func printFilesByAgent(rendered map[string][]byte, agents []string, workflow string) {
-	ownership, err := adapters.FileOwnership(rendered, agents)
+	ownership, err := adapters.FileOwnership(rendered, agents, workflow)
 	if err != nil {
 		// Fallback to flat list on error.
 		paths := make([]string, 0, len(rendered))

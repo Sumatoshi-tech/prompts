@@ -1,6 +1,7 @@
 package config
 
 import (
+	"slices"
 	"sort"
 	"strings"
 
@@ -35,6 +36,11 @@ type EcosystemModule struct {
 
 	// Description is a human-readable description for selection prompts.
 	Description string
+
+	// RequiredFields lists config field names that must be non-empty for this ecosystem.
+	// The wizard enforces these inline; the validator uses them as a backstop.
+	// Valid names: "module_path", or any field the ecosystem needs.
+	RequiredFields []string
 
 	// DefaultAnalysisCmd is the default analysis command for this ecosystem.
 	DefaultAnalysisCmd string
@@ -103,6 +109,11 @@ func EcosystemDescriptions() map[string]string {
 	}
 
 	return descs
+}
+
+// Requires returns true if the given field name is in RequiredFields.
+func (m *EcosystemModule) Requires(field string) bool {
+	return slices.Contains(m.RequiredFields, field)
 }
 
 // AllEcosystems returns all registered modules sorted by name.
