@@ -188,7 +188,7 @@ func RunUpdate(opts UpdateOptions) error {
 
 		// Log per-file agent ownership.
 		var ownership map[string]adapters.FileAgent
-		if ownership, err = adapters.FileOwnership(rendered, cfg.Agents); err == nil {
+		if ownership, err = adapters.FileOwnership(rendered, cfg.Agents, cfg.Workflow); err == nil {
 			for _, agent := range cfg.Agents {
 				var files []string
 
@@ -255,7 +255,7 @@ func RunUpdate(opts UpdateOptions) error {
 	// Display summary with change and agent annotations.
 	reverseMap := config.ReverseFieldMap()
 	// Best-effort; display continues without annotations.
-	ownership, _ := adapters.FileOwnership(rendered, cfg.Agents)
+	ownership, _ := adapters.FileOwnership(rendered, cfg.Agents, cfg.Workflow)
 
 	if len(diffs) > 0 {
 		fmt.Fprintf(w, "Found %d file(s) with changes:\n", len(diffs))

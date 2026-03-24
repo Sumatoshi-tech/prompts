@@ -76,7 +76,7 @@ func runDoctor(_ *cobra.Command, _ []string) error {
 		return errors.New("doctor found errors")
 	}
 
-	ownership, err := adapters.FileOwnership(rendered, cfg.Agents)
+	ownership, err := adapters.FileOwnership(rendered, cfg.Agents, cfg.Workflow)
 	if err != nil {
 		fmt.Printf("  [err] File ownership: %v\n", err)
 		return errors.New("doctor found errors")

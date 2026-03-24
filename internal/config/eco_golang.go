@@ -1,10 +1,6 @@
 package config
 
-import (
-	"errors"
-
-	"github.com/spf13/cobra"
-)
+import "github.com/spf13/cobra"
 
 const defaultGoVersion = "1.22"
 
@@ -16,6 +12,7 @@ func init() {
 	RegisterEcosystem(&EcosystemModule{
 		Name:               EcosystemGolang,
 		Description:        "Go — modules, go vet, golangci-lint, go test",
+		RequiredFields:     []string{"module_path", "go_version"},
 		DefaultAnalysisCmd: "go vet ./...",
 
 		DefaultCmdPath: func(binaryName string) string {
@@ -30,13 +27,7 @@ func init() {
 			cfg.AnalysisCmd = "go vet ./..."
 		},
 
-		Validate: func(cfg *Config) []error {
-			if cfg.GoVersion == "" {
-				return []error{errors.New("go_version is required for golang ecosystem (e.g. \"1.22\")")}
-			}
-
-			return nil
-		},
+		Validate: nil,
 
 		RegisterFlags: func(cmd *cobra.Command) {
 			cmd.Flags().StringVar(&golangFlags.goVersion, "go-version", "", "Go version")

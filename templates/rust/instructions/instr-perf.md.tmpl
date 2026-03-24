@@ -1,13 +1,10 @@
+{{define "perf_title"}}
 # Agent Instructions: Rust Performance Optimization
 
 You are a performance-focused systems agent. Your goal is to diagnose bottlenecks and maximize throughput in a Rust application.
+{{- end}}
 
-You must **first diagnose** the bottleneck (waiting vs compute vs lock contention vs boundary overhead), then implement the architecture that matches the findings.
-
----
-
-## 1) Non-Negotiable Principles
-
+{{define "perf_principles"}}
 1. **Measure before optimizing** — never guess; always profile first.
 2. **Minimize allocations in hot paths** — use arenas, pre-allocated buffers, stack allocation.
 3. **Separate I/O from compute** — I/O-bound and CPU-bound work scale differently.
@@ -16,26 +13,13 @@ You must **first diagnose** the bottleneck (waiting vs compute vs lock contentio
 {{- if .LinkLibc}}
 6. **Minimize FFI crossings** — one FFI call should do a lot of work.
 {{- end}}
+{{- end}}
 
----
-
-## 2) Mandatory Phase 1: Symptom-Driven Diagnostics (Do This First)
-
-### 1.1 Establish a Reproducible Benchmark Harness
+{{define "perf_benchmark_tool"}}
 Create a deterministic benchmark using `criterion` or built-in `#[bench]`:
-- Fixed input data set
-- Warm-up run (handled by criterion)
-- Steady-state run (10-60s)
+{{- end}}
 
-Record:
-- ops/sec or items/sec
-- p50/p95/p99 latency
-- CPU utilization (total + per-core)
-- RSS / page faults (if available)
-
-**Acceptance:** results reproducible within +/-5-10%.
-
----
+{{define "perf_profiling"}}
 
 ### 1.2 Profiling with perf / flamegraph
 Capture a flamegraph under load:
@@ -73,11 +57,9 @@ heaptrack ./target/release/{{.ProjectName}}
 - Many small allocations in hot loops
 - Growing RSS without matching workload increase
 - Frequent allocation/deallocation cycles (use arena or pool)
+{{- end}}
 
----
-
-### 1.4 System-Level Profiling
-
+{{define "perf_sysprofile"}}
 #### Linux
 - `perf stat` for hardware counters (cycles, cache misses, branches)
 - `iostat -x 1` / `pidstat -d 1` for disk I/O
@@ -88,10 +70,13 @@ heaptrack ./target/release/{{.ProjectName}}
 - `instruments -t "Time Profiler"` for CPU sampling
 - `vm_stat 1` for page faults
 - `fs_usage -w <pid>` for filesystem activity
+{{- end}}
 
----
+{{define "perf_os_counters"}}{{end}}
 
-### 1.5 Classification: Decide Bottleneck Class
+{{define "perf_classification"}} 1.5 {{- end}}
+
+{{define "perf_classes"}}
 
 **Class A -- Allocation bound**
 - Allocator functions dominate flamegraph; many small allocs in hot path
@@ -107,12 +92,9 @@ heaptrack ./target/release/{{.ProjectName}}
 
 **Class E -- Cache/memory bound**
 - High cache miss rate in `perf stat`; data layout not cache-friendly
+{{- end}}
 
-Write a short diagnosis note mapping evidence to class.
-
----
-
-## 3) Mandatory Phase 2: Apply Architecture Pattern Matching Diagnosis
+{{define "perf_architecture"}}
 
 ### 2.1 If Class A (Allocation bound): Pool + Arena + Stack
 - Use `bumpalo` or `typed-arena` for batch allocations
@@ -143,8 +125,9 @@ Write a short diagnosis note mapping evidence to class.
 - Align data to cache lines (64 bytes)
 - Group frequently accessed fields together
 - Consider `#[repr(C)]` for predictable layout
+{{- end}}
 
----
+{{define "perf_code_patterns"}}
 
 ## 4) Common Rust Performance Patterns
 
@@ -190,28 +173,18 @@ use memmap2::Mmap;
 let file = File::open(path)?;
 let mmap = unsafe { Mmap::map(&file)? };
 ```
+{{- end}}
 
----
-
-## 5) Performance Traps (Must Not Do)
-
-- No premature optimization without profiling evidence.
+{{define "perf_traps"}}
 - No `.clone()` in hot loops without justification.
 - No `String` allocation where `&str` suffices.
 - No `Box<dyn Trait>` in hot paths (prefer monomorphization).
 - No `format!()` in hot paths (use `write!` to a reused buffer).
 - No unbounded `Vec` growth without capacity hints.
 - No `Mutex` around data that can be sharded or made atomic.
+{{- end}}
 
----
-
-## 6) Deliverables
-
-You must output:
-1. Diagnosis summary (evidence -> bottleneck class).
-2. Specific optimization plan with expected impact.
+{{define "perf_deliverables"}}
 3. Benchmark before/after comparison (criterion).
 4. Concurrency design (if applicable): stages, channels, ownership.
-5. Success metrics and how they are measured.
-
-If diagnosis is missing, the design is considered incomplete.
+{{- end}}

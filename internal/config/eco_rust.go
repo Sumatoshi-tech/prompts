@@ -1,7 +1,6 @@
 package config
 
 import (
-	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -41,6 +40,7 @@ func init() {
 	RegisterEcosystem(&EcosystemModule{
 		Name:               EcosystemRust,
 		Description:        "Rust — Cargo, clippy, rustfmt, cargo test",
+		RequiredFields:     []string{"rust_edition"},
 		DefaultAnalysisCmd: "cargo clippy -- -D warnings",
 
 		DefaultCmdPath: func(_ string) string {
@@ -62,19 +62,13 @@ func init() {
 		},
 
 		Validate: func(cfg *Config) []error {
-			var errs []error
-
-			if cfg.RustEdition == "" {
-				errs = append(errs, errors.New("rust_edition is required for rust ecosystem (e.g. \"2021\")"))
-			}
-
 			if cfg.UnsafePolicy != "" && !validUnsafePolicies[cfg.UnsafePolicy] {
-				errs = append(errs, fmt.Errorf(
+				return []error{fmt.Errorf(
 					"unsafe_policy: unknown value %q (valid: %s)",
-					cfg.UnsafePolicy, strings.Join(validUnsafePolicyNames(), ", ")))
+					cfg.UnsafePolicy, strings.Join(validUnsafePolicyNames(), ", "))}
 			}
 
-			return errs
+			return nil
 		},
 
 		RegisterFlags: func(cmd *cobra.Command) {

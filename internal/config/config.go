@@ -185,6 +185,36 @@ func Default() *Config {
 	return cfg
 }
 
+// fieldValue returns the string value of a config field by its yaml key name.
+func (c *Config) fieldValue(yamlKey string) string {
+	switch yamlKey {
+	case "project_name":
+		return c.ProjectName
+	case "module_path":
+		return c.ModulePath
+	case "go_version":
+		return c.GoVersion
+	case "rust_edition":
+		return c.RustEdition
+	case "zig_version":
+		return c.ZigVersion
+	case "description":
+		return c.Description
+	case "expertise":
+		return c.Expertise
+	case "ecosystem":
+		return c.Ecosystem
+	case "workflow":
+		return c.Workflow
+	case "unsafe_policy":
+		return c.UnsafePolicy
+	case "analysis_command":
+		return c.AnalysisCmd
+	default:
+		return ""
+	}
+}
+
 // Validate checks required fields and returns an error if invalid.
 func (c *Config) Validate() error {
 	var errs []error
@@ -193,12 +223,16 @@ func (c *Config) Validate() error {
 		errs = append(errs, errors.New("project_name is required (set project_name in .promptkit.yaml)"))
 	}
 
-	if c.ModulePath == "" {
-		errs = append(errs, errors.New("module_path is required (e.g. github.com/org/project)"))
-	}
+	if mod := GetEcosystem(c.Ecosystem); mod != nil {
+		for _, field := range mod.RequiredFields {
+			if c.fieldValue(field) == "" {
+				errs = append(errs, fmt.Errorf("%s is required for %s ecosystem", field, c.Ecosystem))
+			}
+		}
 
-	if mod := GetEcosystem(c.Ecosystem); mod != nil && mod.Validate != nil {
-		errs = append(errs, mod.Validate(c)...)
+		if mod.Validate != nil {
+			errs = append(errs, mod.Validate(c)...)
+		}
 	}
 
 	if len(c.Binaries) == 0 {

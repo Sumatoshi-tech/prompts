@@ -1,0 +1,9 @@
+{{define "gen_scan_files"}}Scan all `*.zig` files excluding test blocks (`test "..."` sections and `test/` directory).{{end}}
+{{define "gen_criteria_ab"}}
+- **(a) Cross-module potential** — it does something that could be needed in other modules if we generalize the function signature.
+- **(b) Already generic** — it is already mostly generic; to make it fully generic we just have to use `anytype` or comptime parameters.
+{{- end}}
+{{define "gen_list_term"}}module{{end}}
+{{define "gen_generics_focus"}}
+4. **Generics focus** — when criterion (b) applies, note which comptime parameters or `anytype` usage would be needed.
+{{- end}}

@@ -3,6 +3,7 @@ package adapters
 
 import (
 	"fmt"
+	"maps"
 	"path/filepath"
 
 	"github.com/Sumatoshi-tech/prompts/internal/config"
@@ -21,41 +22,68 @@ type PlacedFile struct {
 	Content []byte
 }
 
-// AgentInstructionsDir is the project-relative directory for rendered instruction
-// sources (skill bodies and workflow templates).
-const AgentInstructionsDir = ".agents/instructions"
-
-// InstrFRDPath is the on-disk FRD outline used by the implement workflow.
-const InstrFRDPath = AgentInstructionsDir + "/instr-frd.md"
-
-// InstrJourneyPath is the on-disk journey outline used by the implement workflow.
-const InstrJourneyPath = AgentInstructionsDir + "/instr-journey.md"
-
-// Workflow templates (FRD / journey) stay on disk under AgentInstructionsDir;
-// they are not Agent Skills. /implement tells the agent to copy and fill them.
-
 // baseSkills are skills present in all workflows.
 var baseSkills = map[string]SkillDef{
-	AgentInstructionsDir + "/instr-implement.md": {
+	"instructions/instr-implement.md": {
 		Name:        "implement",
 		Description: "Iterative TDD implementation following roadmap items",
 	},
-	AgentInstructionsDir + "/instr-roadmaper.md": {
+	"instructions/instr-roadmaper.md": {
 		Name:        "roadmap",
 		Description: "Create decomposed roadmap from specification",
 	},
-	AgentInstructionsDir + "/instr-perf.md": {
+	"instructions/instr-perf.md": {
 		Name:        "perf",
 		Description: "Performance diagnosis and optimization workflow",
 	},
+	"instructions/instr-generalize.md": {
+		Name:        "generalize",
+		Description: "Find reusable code and document generalization opportunities",
+	},
 }
 
-// skillInstructionPaths lists raw instruction files that are converted into
-// Agent Skills and therefore removed from the rendered tree after placement.
-func skillInstructionPaths() map[string]bool {
-	paths := make(map[string]bool, len(baseSkills))
+// workflowSkills maps workflow name to the workflow-specific skill.
+var workflowSkills = map[string]map[string]SkillDef{
+	config.WorkflowFRD: {
+		"instructions/instr-frd.md": {
+			Name:        "frd",
+			Description: "Feature requirements document template",
+		},
+	},
+	config.WorkflowJourney: {
+		"instructions/instr-journey.md": {
+			Name:        "journey",
+			Description: "Journey-based feature requirements with CJM",
+		},
+	},
+}
+
+// skillsForWorkflow returns the combined skill map for a given workflow.
+func skillsForWorkflow(workflow string) map[string]SkillDef {
+	result := make(map[string]SkillDef, len(baseSkills)+1)
+	maps.Copy(result, baseSkills)
+
+	if wfSkills, ok := workflowSkills[workflow]; ok {
+		maps.Copy(result, wfSkills)
+	} else {
+		// Default to FRD workflow.
+		maps.Copy(result, workflowSkills[config.WorkflowFRD])
+	}
+
+	return result
+}
+
+// allSkillPaths returns all possible instruction paths across all workflows.
+func allSkillPaths() map[string]bool {
+	paths := make(map[string]bool)
 	for path := range baseSkills {
 		paths[path] = true
+	}
+
+	for _, wfSkills := range workflowSkills {
+		for path := range wfSkills {
+			paths[path] = true
+		}
 	}
 
 	return paths
@@ -63,12 +91,11 @@ func skillInstructionPaths() map[string]bool {
 
 // PlaceForAgents takes the rendered template output and generates
 // agent-specific file placements for all configured agents.
-// Skill-backed instruction files (implement, roadmap, perf) are deleted from
-// the output map by the caller after placement; workflow templates under
-// AgentInstructionsDir (FRD or journey) are left on disk.
-func PlaceForAgents(rendered map[string][]byte, agents []string) ([]PlacedFile, error) {
+// It also removes the raw instructions/ files from the output since
+// they are replaced by agent-specific skill files.
+func PlaceForAgents(rendered map[string][]byte, agents []string, workflow string) ([]PlacedFile, error) {
 	// Extract skill bodies from rendered instructions.
-	extractedSkills := extractSkills(rendered)
+	extractedSkills := extractSkills(rendered, workflow)
 
 	var placed []PlacedFile
 
@@ -94,8 +121,8 @@ type FileAgent struct {
 // FileOwnership computes a reverse mapping from file paths to the agents
 // that generate them. Base template files (AGENTS.md, Makefile, etc.)
 // have nil Agents. Files produced by multiple agents are marked IsShared.
-func FileOwnership(rendered map[string][]byte, agents []string) (map[string]FileAgent, error) {
-	extractedSkills := extractSkills(rendered)
+func FileOwnership(rendered map[string][]byte, agents []string, workflow string) (map[string]FileAgent, error) {
+	extractedSkills := extractSkills(rendered, workflow)
 	ownership := make(map[string]FileAgent)
 
 	// Base template files (not produced by any agent).
@@ -141,24 +168,24 @@ func FileOwnership(rendered map[string][]byte, agents []string) (map[string]File
 	return ownership, nil
 }
 
-// RemoveInstructionPaths returns raw instruction paths removed after skill
-// placement. Workflow templates (instr-frd.md, instr-journey.md) are not
-// included — they remain under AgentInstructionsDir for /implement to follow.
+// RemoveInstructionPaths returns the set of raw instruction paths that
+// should be removed from the rendered output (they are replaced by skills).
+// Returns all possible instruction paths across all workflows.
 func RemoveInstructionPaths() []string {
-	paths := skillInstructionPaths()
-	out := make([]string, 0, len(paths))
+	allPaths := allSkillPaths()
+	paths := make([]string, 0, len(allPaths))
 
-	for path := range paths {
-		out = append(out, path)
+	for path := range allPaths {
+		paths = append(paths, path)
 	}
 
-	return out
+	return paths
 }
 
-func extractSkills(rendered map[string][]byte) []SkillDef {
+func extractSkills(rendered map[string][]byte, workflow string) []SkillDef {
 	var result []SkillDef
 
-	for path, def := range baseSkills {
+	for path, def := range skillsForWorkflow(workflow) {
 		body, ok := rendered[path]
 		if !ok {
 			continue

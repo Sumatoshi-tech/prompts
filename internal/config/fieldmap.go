@@ -10,21 +10,21 @@ import (
 var FieldFiles = map[string][]string{
 	"project_name":              {"AGENTS.md", "Makefile"},
 	"module_path":               {"Makefile"},
-	"description":               {"AGENTS.md", ".agents/instructions/instr-implement.md"},
+	"description":               {"AGENTS.md", "instructions/instr-implement.md"},
 	"expertise":                 {"AGENTS.md"},
-	"identity_years":            {"AGENTS.md", ".agents/instructions/instr-implement.md", ".agents/instructions/instr-roadmaper.md"},
-	"analysis_command":          {"AGENTS.md", ".agents/instructions/instr-implement.md"},
+	"identity_years":            {"AGENTS.md", "instructions/instr-implement.md", "instructions/instr-roadmaper.md"},
+	"analysis_command":          {"AGENTS.md", "instructions/instr-implement.md"},
 	"binaries":                  {"Makefile"},
 	"quality.coverage_min":      {"AGENTS.md"},
-	"quality.coverage_critical": {"AGENTS.md", ".agents/instructions/instr-implement.md"},
+	"quality.coverage_critical": {"AGENTS.md", "instructions/instr-implement.md"},
 	"quality.complexity_max":    {"AGENTS.md"},
 	"quality.line_length":       {".golangci.yml"},
-	"features.cgo":              {"AGENTS.md", "Makefile", ".agents/instructions/instr-perf.md", "scripts/deadcode-filter.sh"},
+	"features.cgo":              {"AGENTS.md", "Makefile", "instructions/instr-perf.md", "scripts/deadcode-filter.sh"},
 	"features.docker":           {"AGENTS.md", "Makefile"},
 	"features.benchmarks":       {"AGENTS.md", "Makefile"},
 	"features.cgo_libs":         {"Makefile", "scripts/deadcode-filter.sh"},
 	"agents":                    {}, // affects agent-specific placement, not template content.
-	"workflow":                  {".agents/instructions/instr-implement.md", ".agents/instructions/instr-roadmaper.md"},
+	"workflow":                  {"instructions/instr-implement.md", "instructions/instr-roadmaper.md"},
 }
 
 // AllFieldFiles returns FieldFiles merged with ecosystem module field entries.

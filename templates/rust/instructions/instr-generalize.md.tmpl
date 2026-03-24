@@ -1,0 +1,9 @@
+{{define "gen_scan_files"}}Scan all `*.rs` files excluding test modules (`#[cfg(test)]` blocks and `tests/` directory).{{end}}
+{{define "gen_criteria_ab"}}
+- **(a) Cross-crate potential** — it does something that could be needed in other crates if we generalize the function signature.
+- **(b) Already generic** — it is already mostly generic; to make it fully generic we just have to add trait bounds or generic parameters.
+{{- end}}
+{{define "gen_list_term"}}module{{end}}
+{{define "gen_generics_focus"}}
+4. **Generics focus** — when criterion (b) applies, note which trait bounds and generic parameters would be needed.
+{{- end}}

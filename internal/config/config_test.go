@@ -336,7 +336,7 @@ func TestValidate_ErrorSuggestions(t *testing.T) {
 		{
 			name:       "module_path suggestion",
 			modify:     func(c *config.Config) { c.ModulePath = "" },
-			wantSuffix: "e.g. github.com/org/project",
+			wantSuffix: "module_path is required for golang ecosystem",
 		},
 		{
 			name:       "coverage_min default",

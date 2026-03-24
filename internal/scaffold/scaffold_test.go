@@ -74,7 +74,7 @@ func TestRender_NestedPaths(t *testing.T) {
 	t.Parallel()
 
 	tmplFS := fstest.MapFS{
-		"templates/golang/.agents/instructions/instr-frd.md.tmpl": &fstest.MapFile{
+		"templates/golang/instructions/instr-frd.md.tmpl": &fstest.MapFile{
 			Data: []byte("# FRD Template"),
 		},
 	}
@@ -86,8 +86,8 @@ func TestRender_NestedPaths(t *testing.T) {
 		t.Fatalf("Render() error: %v", err)
 	}
 
-	if _, ok := result[".agents/instructions/instr-frd.md"]; !ok {
-		t.Error("expected .agents/instructions/instr-frd.md in output")
+	if _, ok := result["instructions/instr-frd.md"]; !ok {
+		t.Error("expected instructions/instr-frd.md in output")
 	}
 }
 
@@ -1193,11 +1193,13 @@ func TestRenderFull_BasicGolang(t *testing.T) {
 		t.Fatalf("RenderFull() error: %v", err)
 	}
 
-	// Agent Skills SKILL.md files should be present (FRD/journey stay under .agents/instructions/).
+	// Agent Skills SKILL.md files should be present.
 	expectedSkills := []string{
 		".agents/skills/implement/SKILL.md",
 		".agents/skills/roadmap/SKILL.md",
+		".agents/skills/frd/SKILL.md",
 		".agents/skills/perf/SKILL.md",
+		".agents/skills/generalize/SKILL.md",
 	}
 
 	for _, path := range expectedSkills {
@@ -1213,32 +1215,26 @@ func TestRenderFull_BasicGolang(t *testing.T) {
 	}
 
 	// Claude legacy commands should be present.
-	for _, name := range []string{"implement", "roadmap", "perf"} {
+	for _, name := range []string{"implement", "roadmap", "frd", "perf", "generalize"} {
 		path := ".claude/commands/" + name + ".md"
 		if _, ok := result[path]; !ok {
 			t.Errorf("missing Claude command: %s", path)
 		}
 	}
 
-	// Skill-backed instructions removed; workflow template remains on disk.
-	removedPaths := []string{
-		".agents/instructions/instr-implement.md",
-		".agents/instructions/instr-roadmaper.md",
-		".agents/instructions/instr-perf.md",
+	// Raw instruction files should NOT be in the output.
+	rawPaths := []string{
+		"instructions/instr-implement.md",
+		"instructions/instr-roadmaper.md",
+		"instructions/instr-frd.md",
+		"instructions/instr-perf.md",
+		"instructions/instr-generalize.md",
 	}
 
-	for _, path := range removedPaths {
+	for _, path := range rawPaths {
 		if _, ok := result[path]; ok {
-			t.Errorf("skill instruction file should be removed: %s", path)
+			t.Errorf("raw instruction file should be removed: %s", path)
 		}
-	}
-
-	if _, ok := result[".agents/instructions/instr-frd.md"]; !ok {
-		t.Error("expected .agents/instructions/instr-frd.md to remain for frd workflow")
-	}
-
-	if _, ok := result[".agents/instructions/instr-journey.md"]; ok {
-		t.Error("instr-journey.md should not be shipped for frd workflow")
 	}
 
 	// Non-instruction base files should still be present.
@@ -1272,25 +1268,18 @@ func TestRenderFull_JourneyWorkflow(t *testing.T) {
 		t.Fatalf("RenderFull() error: %v", err)
 	}
 
-	// Journey template on disk; no separate journey skill.
-	if _, ok := result[".agents/instructions/instr-journey.md"]; !ok {
-		t.Error("expected .agents/instructions/instr-journey.md for journey workflow")
+	// Journey skill should be present instead of FRD.
+	if _, ok := result[".agents/skills/journey/SKILL.md"]; !ok {
+		t.Error("missing journey skill file for journey workflow")
 	}
 
-	if _, ok := result[".agents/instructions/instr-frd.md"]; ok {
-		t.Error("instr-frd.md should not be shipped for journey workflow")
-	}
-
-	if _, ok := result[".agents/skills/journey/SKILL.md"]; ok {
-		t.Error("journey should not be an Agent Skill")
-	}
-
+	// FRD skill should NOT be present.
 	if _, ok := result[".agents/skills/frd/SKILL.md"]; ok {
-		t.Error("frd should not be an Agent Skill")
+		t.Error("frd skill should not be present in journey workflow")
 	}
 
 	// Base skills should still be present.
-	for _, name := range []string{"implement", "roadmap", "perf"} {
+	for _, name := range []string{"implement", "roadmap", "perf", "generalize"} {
 		path := ".agents/skills/" + name + "/SKILL.md"
 		if _, ok := result[path]; !ok {
 			t.Errorf("missing base skill: %s", path)
@@ -1372,7 +1361,7 @@ func TestRenderFullWithOverrides_Basic(t *testing.T) {
 		"templates/golang/README.md.tmpl": &fstest.MapFile{
 			Data: []byte("# Embedded {{.ProjectName}}"),
 		},
-		"templates/golang/.agents/instructions/instr-implement.md.tmpl": &fstest.MapFile{
+		"templates/golang/instructions/instr-implement.md.tmpl": &fstest.MapFile{
 			Data: []byte("implement instruction for {{.ProjectName}}"),
 		},
 	}
@@ -1614,5 +1603,207 @@ func TestWriteFileAtomic_NestedDirectory(t *testing.T) {
 		if strings.HasSuffix(e.Name(), ".promptkit.tmp") {
 			t.Errorf("temp file left behind in nested dir: %s", e.Name())
 		}
+	}
+}
+
+// Shared template tests.
+
+func TestRender_SharedTemplateFallback(t *testing.T) {
+	t.Parallel()
+
+	// Shared template exists but ecosystem does not — shared should be used.
+	tmplFS := fstest.MapFS{
+		"templates/golang/base.txt.tmpl": &fstest.MapFile{
+			Data: []byte("eco: {{.ProjectName}}"),
+		},
+		"templates/_shared/shared.txt.tmpl": &fstest.MapFile{
+			Data: []byte("shared: {{.ProjectName}}"),
+		},
+	}
+
+	cfg := testConfig()
+
+	result, err := scaffold.Render(cfg, tmplFS)
+	if err != nil {
+		t.Fatalf("Render() error: %v", err)
+	}
+
+	// Ecosystem file should be present.
+	if got := string(result["base.txt"]); !strings.Contains(got, "eco:") {
+		t.Errorf("ecosystem template not rendered: %s", got)
+	}
+
+	// Shared file should be present as fallback.
+	got, ok := result["shared.txt"]
+	if !ok {
+		t.Fatal("expected shared.txt from _shared fallback")
+	}
+
+	if !strings.Contains(string(got), "shared: testproject") {
+		t.Errorf("shared template not rendered correctly: %s", string(got))
+	}
+}
+
+func TestRender_EcosystemOverridesShared(t *testing.T) {
+	t.Parallel()
+
+	// Both shared and ecosystem have the same output path — ecosystem wins.
+	tmplFS := fstest.MapFS{
+		"templates/_shared/readme.txt.tmpl": &fstest.MapFile{
+			Data: []byte("shared version"),
+		},
+		"templates/golang/readme.txt.tmpl": &fstest.MapFile{
+			Data: []byte("ecosystem version"),
+		},
+	}
+
+	cfg := testConfig()
+
+	result, err := scaffold.Render(cfg, tmplFS)
+	if err != nil {
+		t.Fatalf("Render() error: %v", err)
+	}
+
+	got := string(result["readme.txt"])
+	if got != "ecosystem version" {
+		t.Errorf("ecosystem should override shared, got: %s", got)
+	}
+}
+
+func TestRender_SharedDirMissing(t *testing.T) {
+	t.Parallel()
+
+	// No _shared directory — should work fine (backwards compatible).
+	tmplFS := fstest.MapFS{
+		"templates/golang/file.txt.tmpl": &fstest.MapFile{
+			Data: []byte("content: {{.ProjectName}}"),
+		},
+	}
+
+	cfg := testConfig()
+
+	result, err := scaffold.Render(cfg, tmplFS)
+	if err != nil {
+		t.Fatalf("Render() error: %v", err)
+	}
+
+	if !strings.Contains(string(result["file.txt"]), "content: testproject") {
+		t.Error("rendering should work without _shared directory")
+	}
+}
+
+func TestRender_SharedComposition(t *testing.T) {
+	t.Parallel()
+
+	// Shared template defines a block with default, ecosystem overrides it.
+	tmplFS := fstest.MapFS{
+		"templates/_shared/doc.txt.tmpl": &fstest.MapFile{
+			Data: []byte("Header\n{{block \"body\" .}}default body{{end}}\nFooter"),
+		},
+		"templates/golang/doc.txt.tmpl": &fstest.MapFile{
+			Data: []byte("{{define \"body\"}}Go-specific body for {{.ProjectName}}{{end}}"),
+		},
+	}
+
+	cfg := testConfig()
+
+	result, err := scaffold.Render(cfg, tmplFS)
+	if err != nil {
+		t.Fatalf("Render() error: %v", err)
+	}
+
+	got := string(result["doc.txt"])
+	if !strings.Contains(got, "Header") {
+		t.Error("missing shared header")
+	}
+
+	if !strings.Contains(got, "Go-specific body for testproject") {
+		t.Errorf("ecosystem block override not applied: %s", got)
+	}
+
+	if !strings.Contains(got, "Footer") {
+		t.Error("missing shared footer")
+	}
+
+	if strings.Contains(got, "default body") {
+		t.Error("default block should have been overridden")
+	}
+}
+
+func TestRender_SharedBlockDefault(t *testing.T) {
+	t.Parallel()
+
+	// Shared template with block, no ecosystem override — default should render.
+	tmplFS := fstest.MapFS{
+		"templates/_shared/doc.txt.tmpl": &fstest.MapFile{
+			Data: []byte("Header\n{{block \"body\" .}}default body{{end}}\nFooter"),
+		},
+	}
+
+	cfg := testConfig()
+
+	result, err := scaffold.Render(cfg, tmplFS)
+	if err != nil {
+		t.Fatalf("Render() error: %v", err)
+	}
+
+	got := string(result["doc.txt"])
+	if !strings.Contains(got, "default body") {
+		t.Errorf("default block should render when no ecosystem override: %s", got)
+	}
+}
+
+func TestRenderSingle_SharedFallback(t *testing.T) {
+	t.Parallel()
+
+	tmplFS := fstest.MapFS{
+		"templates/_shared/instructions/instr-frd.md.tmpl": &fstest.MapFile{
+			Data: []byte("# Shared FRD for {{.ProjectName}}"),
+		},
+	}
+
+	cfg := testConfig()
+
+	result, err := scaffold.RenderSingle(cfg, tmplFS, "", "instructions/instr-frd.md")
+	if err != nil {
+		t.Fatalf("RenderSingle() error: %v", err)
+	}
+
+	if !strings.Contains(string(result), "Shared FRD for testproject") {
+		t.Errorf("RenderSingle should fall back to shared: %s", string(result))
+	}
+}
+
+func TestRenderFull_SharedTemplatesIntegration(t *testing.T) {
+	t.Parallel()
+
+	cfg := testConfig()
+	cfg.Agents = []string{config.AgentClaude}
+	cfg.Workflow = config.WorkflowFRD
+
+	result, err := scaffold.RenderFull(cfg, promptkit.Templates)
+	if err != nil {
+		t.Fatalf("RenderFull() error: %v", err)
+	}
+
+	// Generalize skill should be generated from _shared template.
+	genSkill, ok := result[".agents/skills/generalize/SKILL.md"]
+	if !ok {
+		t.Fatal("missing generalize skill from _shared template")
+	}
+
+	content := string(genSkill)
+	if !strings.Contains(content, "Generalize") {
+		t.Error("generalize skill missing expected content")
+	}
+
+	// Should have Go-specific content since ecosystem is golang.
+	if !strings.Contains(content, "*.go") {
+		t.Error("generalize skill should contain Go-specific file pattern")
+	}
+
+	// FRD should also work from _shared.
+	if _, ok = result[".agents/skills/frd/SKILL.md"]; !ok {
+		t.Error("missing frd skill from _shared template")
 	}
 }
