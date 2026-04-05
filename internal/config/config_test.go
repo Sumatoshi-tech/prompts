@@ -568,8 +568,8 @@ func TestMarshalCommented_Version(t *testing.T) {
 	data := config.MarshalCommented(cfg)
 	s := string(data)
 
-	if !contains(s, "version: 2") {
-		t.Error("MarshalCommented should contain version: 2")
+	if !contains(s, "version: 3") {
+		t.Error("MarshalCommented should contain version: 3")
 	}
 
 	if !contains(s, "do not edit") {

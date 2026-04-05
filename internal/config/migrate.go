@@ -1,7 +1,7 @@
 package config
 
 // CurrentVersion is the latest config schema version.
-const CurrentVersion = 2
+const CurrentVersion = 3
 
 // Migrate applies forward migrations to bring a config to CurrentVersion.
 // Returns a list of human-readable changes that were applied.
@@ -28,7 +28,7 @@ func Migrate(cfg *Config) []string {
 		cfg.Version = 1
 	}
 
-	if cfg.Version < CurrentVersion {
+	if cfg.Version < 2 {
 		if cfg.Workflow == "" {
 			cfg.Workflow = WorkflowFRD
 
@@ -36,6 +36,11 @@ func Migrate(cfg *Config) []string {
 		}
 
 		cfg.Version = 2
+	}
+
+	if cfg.Version < CurrentVersion {
+		// v2 → v3: mixtures field added (optional, defaults to empty).
+		cfg.Version = CurrentVersion
 	}
 
 	return changes

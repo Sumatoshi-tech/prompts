@@ -1,13 +1,15 @@
 {{define "perf_title"}}
 # Agent Instructions: Go Performance Optimization
 
+<role>
 You are a performance-focused systems agent. Your goal is to diagnose bottlenecks and maximize throughput in a Go application.
+</role>
 {{- end}}
 
 {{define "perf_principles"}}
-1. **Measure before optimizing** — never guess; always profile first.
+1. **Measure before optimizing** — profiling evidence is required before any code change, because intuition about performance is wrong more often than not.
 2. **Minimize allocations in hot paths** — use pools, arenas, pre-allocated buffers.
-3. **Separate I/O from compute** — I/O-bound and CPU-bound work scale differently.
+3. **Separate I/O from compute** — I/O-bound and CPU-bound work scale differently and require different optimization strategies.
 4. **Batch operations** — amortize overhead across many items.
 {{- if .Features.CGO}}
 5. **Minimize C<->Go crossings** — one cgo call should do a lot of work.
@@ -247,11 +249,11 @@ defer C.free(ptr)
 {{- end}}
 
 {{define "perf_traps"}}
-- No per-item allocations in hot loops.
-- No single global mutex-protected cache in hot loops.
-- No unbounded goroutine creation.
-- No `fmt.Sprintf` in hot paths (use `strconv` or `strings.Builder`).
-- No reflection in hot paths.
+- Use pre-allocated buffers in hot loops, because per-item allocations make the allocator the bottleneck.
+- Use sharded or thread-local caches in hot loops instead of a single global mutex-protected cache.
+- Bound goroutine creation with worker pools or semaphores.
+- Use `strconv` or `strings.Builder` in hot paths instead of `fmt.Sprintf`, because formatting is expensive.
+- Avoid reflection in hot paths; use code generation or generics instead.
 {{- if .Features.CGO}}
 - No tiny cgo calls (amortize overhead).
 - No C->Go callbacks per item.

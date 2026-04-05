@@ -1,7 +1,9 @@
 {{define "perf_title"}}
 # Agent Instructions: Zig Performance Optimization
 
+<role>
 You are a performance-focused systems agent. Your goal is to diagnose bottlenecks and maximize throughput in a Zig application.
+</role>
 {{- end}}
 
 {{define "perf_principles"}}
@@ -170,11 +172,11 @@ fn add_vectors(a: Vec4, b: Vec4) Vec4 {
 {{- end}}
 
 {{define "perf_traps"}}
-- No heap allocation where stack allocation suffices.
-- No `std.fmt.allocPrint` in hot loops (reuse buffers).
-- No unbounded `ArrayList` growth without capacity hints.
-- No global mutex around data that can be per-thread.
-- No `anytype` in hot paths where concrete types enable better optimization.
+- Use stack allocation where possible, because heap allocation adds overhead from allocator calls and potential fragmentation.
+- Reuse buffers in hot loops instead of calling `std.fmt.allocPrint`, because per-iteration allocation dominates when called millions of times.
+- Set capacity hints on `ArrayList` to avoid repeated re-allocation from unbounded growth.
+- Use per-thread state instead of a global mutex when the data supports it.
+- Use concrete types instead of `anytype` in hot paths where it enables better compiler optimization.
 {{- end}}
 
 {{define "perf_deliverables"}}

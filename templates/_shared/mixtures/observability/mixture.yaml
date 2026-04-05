@@ -1,0 +1,6 @@
+name: observability
+description: Structured logging, metrics, and tracing awareness
+use_case: Production services requiring operational visibility, debugging, and monitoring
+targets:
+  - implement
+  - perf

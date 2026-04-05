@@ -25,6 +25,7 @@ var FieldFiles = map[string][]string{
 	"features.cgo_libs":         {"Makefile", "scripts/deadcode-filter.sh"},
 	"agents":                    {}, // affects agent-specific placement, not template content.
 	"workflow":                  {"instructions/instr-implement.md", "instructions/instr-roadmaper.md"},
+	"mixtures":                  {}, // affects skill content via mixture injection.
 }
 
 // AllFieldFiles returns FieldFiles merged with ecosystem module field entries.
@@ -77,6 +78,7 @@ var baseDescriptions = map[string]string{
 	"features.cgo_libs":         "CGO library dependencies",
 	"agents":                    "Target AI agents for file placement",
 	"workflow":                  "Development workflow (frd or journey)",
+	"mixtures":                  "Instruction mixtures injected into targeted skills",
 }
 
 // ExplainField returns the output files affected by a config key,

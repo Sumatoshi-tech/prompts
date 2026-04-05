@@ -10,6 +10,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -95,6 +96,11 @@ func Render(cfg *config.Config, tmplFS fs.FS) (map[string][]byte, error) {
 
 		// Strip the template directory prefix to get the output path.
 		outPath := strings.TrimPrefix(path, tmplDir+"/")
+
+		// Mixture templates are consumed by the mixtures package, not rendered as files.
+		if strings.HasPrefix(outPath, "mixtures/") {
+			return nil
+		}
 
 		// If it's a .tmpl file, render it; otherwise copy as-is.
 		if trimmed, ok := strings.CutSuffix(outPath, tmplSuffix); ok {
@@ -298,6 +304,17 @@ func writeFileAtomic(outPath string, content []byte, perm os.FileMode, label str
 	return nil
 }
 
+// safeJoin joins base and rel, then verifies the result stays under base.
+// Returns an error if the resolved path escapes the base directory.
+func safeJoin(base, rel string) (string, error) {
+	joined := filepath.Clean(filepath.Join(base, rel))
+	if !strings.HasPrefix(joined, filepath.Clean(base)+string(filepath.Separator)) && joined != filepath.Clean(base) {
+		return "", fmt.Errorf("path %q escapes base %q", rel, base)
+	}
+
+	return joined, nil
+}
+
 // BackupFiles copies existing files to .promptkit/backups/<timestamp>/.
 // Only files that already exist on disk are backed up.
 // Returns the backup directory path.
@@ -316,7 +333,10 @@ func BackupFiles(targetDir string, paths []string) (string, error) {
 			continue
 		}
 
-		destPath := filepath.Join(backupDir, relPath)
+		destPath, pathErr := safeJoin(backupDir, relPath)
+		if pathErr != nil {
+			return "", fmt.Errorf("backup path validation: %w", pathErr)
+		}
 
 		if err = os.MkdirAll(filepath.Dir(destPath), 0o750); err != nil {
 			return "", fmt.Errorf("creating backup directory: %w", err)
@@ -348,12 +368,20 @@ func RestoreBackup(backupDir, targetDir string) error {
 			return fmt.Errorf("computing relative path: %w", err)
 		}
 
-		data, err := os.ReadFile(path)
+		safeSrc, srcErr := safeJoin(backupDir, relPath)
+		if srcErr != nil {
+			return fmt.Errorf("restore source path validation: %w", srcErr)
+		}
+
+		data, err := os.ReadFile(safeSrc)
 		if err != nil {
 			return fmt.Errorf("reading backup file %s: %w", relPath, err)
 		}
 
-		destPath := filepath.Join(targetDir, relPath)
+		destPath, destErr := safeJoin(targetDir, relPath)
+		if destErr != nil {
+			return fmt.Errorf("restore destination path validation: %w", destErr)
+		}
 
 		if err = os.MkdirAll(filepath.Dir(destPath), 0o750); err != nil {
 			return fmt.Errorf("creating directory for restore: %w", err)
@@ -406,7 +434,7 @@ func RenderFull(cfg *config.Config, tmplFS fs.FS) (map[string][]byte, error) {
 		return nil, err
 	}
 
-	result, err := applyAgentAdapters(rendered, cfg.Agents, cfg.Workflow)
+	result, err := applyAgentAdapters(rendered, cfg, tmplFS)
 	if err != nil {
 		return nil, err
 	}
@@ -421,7 +449,7 @@ func RenderFullWithOverrides(cfg *config.Config, tmplFS fs.FS, overrideDir strin
 		return nil, err
 	}
 
-	result, err := applyAgentAdapters(rendered, cfg.Agents, cfg.Workflow)
+	result, err := applyAgentAdapters(rendered, cfg, tmplFS)
 	if err != nil {
 		return nil, err
 	}
@@ -529,12 +557,22 @@ func RenderSingle(cfg *config.Config, tmplFS fs.FS, overrideDir, name string) ([
 	return nil, fmt.Errorf("template %q not found", name)
 }
 
-func applyAgentAdapters(rendered map[string][]byte, agents []string, workflow string) (map[string][]byte, error) {
-	if len(agents) == 0 {
+func applyAgentAdapters(rendered map[string][]byte, cfg *config.Config, tmplFS fs.FS) (map[string][]byte, error) {
+	if len(cfg.Agents) == 0 {
 		return rendered, nil
 	}
 
-	placed, err := adapters.PlaceForAgents(rendered, agents, workflow)
+	var mix *adapters.MixtureOpts
+	if len(cfg.Mixtures) > 0 {
+		mix = &adapters.MixtureOpts{
+			Active:     cfg.Mixtures,
+			TemplateFS: tmplFS,
+			Ecosystem:  cfg.Ecosystem,
+			Config:     cfg,
+		}
+	}
+
+	placed, err := adapters.PlaceForAgents(rendered, cfg.Agents, cfg.Workflow, mix)
 	if err != nil {
 		return nil, fmt.Errorf("placing agent files: %w", err)
 	}
@@ -554,10 +592,11 @@ func applyAgentAdapters(rendered map[string][]byte, agents []string, workflow st
 
 func newTemplateFuncMap() template.FuncMap {
 	return template.FuncMap{
-		"join":  strings.Join,
-		"upper": strings.ToUpper,
-		"lower": strings.ToLower,
-		"title": cases.Title(language.English).String,
+		"join":       strings.Join,
+		"upper":      strings.ToUpper,
+		"lower":      strings.ToLower,
+		"title":      cases.Title(language.English).String,
+		"hasMixture": slices.Contains[[]string, string],
 	}
 }
 
@@ -587,6 +626,12 @@ func loadSharedTemplates(tmplFS fs.FS) (map[string][]byte, error) {
 		}
 
 		relPath := strings.TrimPrefix(path, SharedTemplateDir+"/")
+
+		// Mixture templates are consumed by the mixtures package, not rendered as files.
+		if strings.HasPrefix(relPath, "mixtures/") {
+			return nil
+		}
+
 		shared[relPath] = data
 
 		return nil

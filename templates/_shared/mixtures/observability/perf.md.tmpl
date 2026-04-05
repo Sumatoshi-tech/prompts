@@ -1,0 +1,16 @@
+When diagnosing performance, leverage observability:
+
+### Metrics-Driven Diagnosis
+- Before profiling, check existing metrics: are counters, histograms, and gauges already exposing the bottleneck?
+- If metrics are missing for the hot path, add them as part of the optimization — future regressions need detection.
+- Compare metrics before and after optimization to prove improvement quantitatively.
+
+### Trace-Driven Analysis
+- Use distributed tracing spans to identify which component contributes most to latency.
+- Look for span gaps — time not accounted for by child spans indicates hidden overhead.
+- Check for excessive logging in hot paths — structured logging has a cost at high throughput.
+
+### Observability of Optimizations
+- Every optimization should be measurable via existing or new metrics.
+- Add benchmark results to the diagnosis document alongside metric deltas.
+- Set up alerting thresholds based on the new performance baseline.

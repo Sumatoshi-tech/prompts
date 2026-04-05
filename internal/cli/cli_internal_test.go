@@ -298,6 +298,7 @@ func TestRunDoctor_ModifiedFiles(t *testing.T) { //nolint:paralleltest // modifi
 	}
 
 	modified := slices.Concat(data, []byte("\n# manual edit\n"))
+
 	if err = os.WriteFile(agentsPath, modified, 0o600); err != nil {
 		t.Fatalf("writing modified AGENTS.md: %v", err)
 	}

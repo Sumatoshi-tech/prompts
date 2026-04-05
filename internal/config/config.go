@@ -38,6 +38,7 @@ type Config struct {
 	Agents         []string          `yaml:"agents"`
 	Ecosystem      string            `yaml:"ecosystem"`
 	Workflow       string            `yaml:"workflow"`
+	Mixtures       []string          `yaml:"mixtures,omitempty"`
 	RustEdition    string            `yaml:"rust_edition,omitempty"`
 	UnsafePolicy   string            `yaml:"unsafe_policy,omitempty"`
 	ZigVersion     string            `yaml:"zig_version,omitempty"`
@@ -546,6 +547,16 @@ func MarshalCommented(cfg *Config) []byte {
 
 	fmt.Fprintf(&sb, "\n# Development workflow (valid: %s)\n", strings.Join(ValidWorkflowNames(), ", "))
 	writeYAMLField(&sb, "workflow", cfg.Workflow)
+
+	if len(cfg.Mixtures) > 0 {
+		sb.WriteString("\n# Instruction mixtures — cross-cutting concerns injected into targeted skills\n")
+		sb.WriteString("# Run 'promptkit mixture list' to see available mixtures\n")
+		sb.WriteString("mixtures:\n")
+
+		for _, m := range cfg.Mixtures {
+			fmt.Fprintf(&sb, "  - %s\n", m)
+		}
+	}
 
 	if mod := GetEcosystem(cfg.Ecosystem); mod != nil && mod.CommentedFields != nil {
 		for _, f := range mod.CommentedFields(cfg) {

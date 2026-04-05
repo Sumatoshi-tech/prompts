@@ -342,11 +342,12 @@ func TestRunInitPrompts_Golang(t *testing.T) {
 		"mygoproject",                 // 9. Binary name.
 		"y",                           // 10. Docker.
 		"claude",                      // 11. Agents.
+		"n",                           // 12. Generate skills.
 	)
 
 	cfg := config.Default()
 
-	result, err := gatherConfig(cfg, "defaultname", in, io.Discard)
+	result, err := gatherConfig(cfg, "defaultname", in, io.Discard, nil)
 	if err != nil {
 		t.Fatalf("gatherConfig() error: %v", err)
 	}
@@ -386,11 +387,12 @@ func TestRunInitPrompts_GolangWithCGO(t *testing.T) {
 		"cgoproject",
 		"y",
 		"claude",
+		"n", // Generate skills.
 	)
 
 	cfg := config.Default()
 
-	result, err := gatherConfig(cfg, "cgoproject", in, io.Discard)
+	result, err := gatherConfig(cfg, "cgoproject", in, io.Discard, nil)
 	if err != nil {
 		t.Fatalf("gatherConfig() error: %v", err)
 	}
@@ -415,11 +417,12 @@ func TestRunInitPrompts_Rust(t *testing.T) {
 		"mycrustproject",
 		"n",
 		"claude,cursor",
+		"n", // Generate skills.
 	)
 
 	cfg := config.Default()
 
-	result, err := gatherConfig(cfg, "defaultname", in, io.Discard)
+	result, err := gatherConfig(cfg, "defaultname", in, io.Discard, nil)
 	if err != nil {
 		t.Fatalf("gatherConfig() error: %v", err)
 	}
@@ -459,11 +462,12 @@ func TestRunInitPrompts_Zig(t *testing.T) {
 		"myzigproject",
 		"y",
 		"claude",
+		"n", // Generate skills.
 	)
 
 	cfg := config.Default()
 
-	result, err := gatherConfig(cfg, "defaultname", in, io.Discard)
+	result, err := gatherConfig(cfg, "defaultname", in, io.Discard, nil)
 	if err != nil {
 		t.Fatalf("gatherConfig() error: %v", err)
 	}
@@ -503,11 +507,12 @@ func TestRunInitPrompts_ZigWithoutLibc(t *testing.T) {
 		"zignolibc",
 		"y",
 		"claude",
+		"n", // Generate skills.
 	)
 
 	cfg := config.Default()
 
-	result, err := gatherConfig(cfg, "zignolibc", in, io.Discard)
+	result, err := gatherConfig(cfg, "zignolibc", in, io.Discard, nil)
 	if err != nil {
 		t.Fatalf("gatherConfig() error: %v", err)
 	}
@@ -532,11 +537,12 @@ func TestRunInitPrompts_DefaultValues(t *testing.T) {
 		"",                            // 9. Default binary name (testdefault).
 		"",                            // 10. Default docker (yes).
 		"",                            // 11. Default agents (claude).
+		"n",                           // 12. Generate skills.
 	)
 
 	cfg := config.Default()
 
-	result, err := gatherConfig(cfg, "testdefault", in, io.Discard)
+	result, err := gatherConfig(cfg, "testdefault", in, io.Discard, nil)
 	if err != nil {
 		t.Fatalf("gatherConfig() error: %v", err)
 	}
@@ -567,19 +573,20 @@ func TestRunInitPrompts_RustDefaults(t *testing.T) {
 		"rust",
 		"rustdefault",
 		"github.com/user/rustdefault",
-		"", // Default description.
-		"", // Default expertise.
-		"", // Default rust edition (2021).
-		"", // Default unsafe policy (deny).
-		"", // Default workflow (frd).
-		"", // Default binary name (rustdefault).
-		"", // Default docker (yes).
-		"", // Default agents (claude).
+		"",  // Default description.
+		"",  // Default expertise.
+		"",  // Default rust edition (2021).
+		"",  // Default unsafe policy (deny).
+		"",  // Default workflow (frd).
+		"",  // Default binary name (rustdefault).
+		"",  // Default docker (yes).
+		"",  // Default agents (claude).
+		"n", // Generate skills.
 	)
 
 	cfg := config.Default()
 
-	result, err := gatherConfig(cfg, "rustdefault", in, io.Discard)
+	result, err := gatherConfig(cfg, "rustdefault", in, io.Discard, nil)
 	if err != nil {
 		t.Fatalf("gatherConfig() error: %v", err)
 	}
@@ -606,11 +613,12 @@ func TestRunInitPrompts_JourneyWorkflow(t *testing.T) {
 		"journeyproject",
 		"y",
 		"claude",
+		"n", // Generate skills.
 	)
 
 	cfg := config.Default()
 
-	result, err := gatherConfig(cfg, "journeyproject", in, io.Discard)
+	result, err := gatherConfig(cfg, "journeyproject", in, io.Discard, nil)
 	if err != nil {
 		t.Fatalf("gatherConfig() error: %v", err)
 	}
@@ -633,11 +641,12 @@ func TestRunInitPrompts_MultipleAgents(t *testing.T) {
 		"multiagent",
 		"y",
 		"claude,cursor,copilot",
+		"n", // Generate skills.
 	)
 
 	cfg := config.Default()
 
-	result, err := gatherConfig(cfg, "multiagent", in, io.Discard)
+	result, err := gatherConfig(cfg, "multiagent", in, io.Discard, nil)
 	if err != nil {
 		t.Fatalf("gatherConfig() error: %v", err)
 	}
@@ -660,11 +669,12 @@ func TestRunInitPrompts_DockerDisabled(t *testing.T) {
 		"nodocker",
 		"n", // Disable docker.
 		"claude",
+		"n", // Generate skills.
 	)
 
 	cfg := config.Default()
 
-	result, err := gatherConfig(cfg, "nodocker", in, io.Discard)
+	result, err := gatherConfig(cfg, "nodocker", in, io.Discard, nil)
 	if err != nil {
 		t.Fatalf("gatherConfig() error: %v", err)
 	}
@@ -687,11 +697,12 @@ func TestRunInitPrompts_CustomBinaryName(t *testing.T) {
 		"custombin", // Different binary name from project name.
 		"y",
 		"claude",
+		"n", // Generate skills.
 	)
 
 	cfg := config.Default()
 
-	result, err := gatherConfig(cfg, "myproject", in, io.Discard)
+	result, err := gatherConfig(cfg, "myproject", in, io.Discard, nil)
 	if err != nil {
 		t.Fatalf("gatherConfig() error: %v", err)
 	}
@@ -712,7 +723,7 @@ func TestRunInitPrompts_ErrorOnEarlyEOF(t *testing.T) {
 
 	cfg := config.Default()
 
-	_, err := gatherConfig(cfg, "testproject", in, io.Discard)
+	_, err := gatherConfig(cfg, "testproject", in, io.Discard, nil)
 	if err == nil {
 		t.Error("gatherConfig() should error when stdin closes before all prompts are answered")
 	}
@@ -734,11 +745,12 @@ func TestRunInitPrompts_RustCustomBinaryPath(t *testing.T) {
 		"customrust", // Custom binary name.
 		"y",
 		"claude",
+		"n", // Generate skills.
 	)
 
 	cfg := config.Default()
 
-	result, err := gatherConfig(cfg, "rustbin", in, io.Discard)
+	result, err := gatherConfig(cfg, "rustbin", in, io.Discard, nil)
 	if err != nil {
 		t.Fatalf("gatherConfig() error: %v", err)
 	}
@@ -782,12 +794,13 @@ func testAnalysisCmdForEcosystem(t *testing.T, ecosystem string, ecoInputs []str
 		ecosystem+"proj",
 		"y",
 		"claude",
+		"n", // Generate skills.
 	)
 
 	in := newTestInput(t, lines...)
 	cfg := config.Default()
 
-	result, err := gatherConfig(cfg, ecosystem+"proj", in, io.Discard)
+	result, err := gatherConfig(cfg, ecosystem+"proj", in, io.Discard, nil)
 	if err != nil {
 		t.Fatalf("gatherConfig() error: %v", err)
 	}

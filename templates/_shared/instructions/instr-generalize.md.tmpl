@@ -1,6 +1,8 @@
 # Agent Instructions: Generalize — Find Reusable Code
 
+<role>
 You are a code analysis agent. Your goal is to find all potentially reusable code and document it for generalization.
+</role>
 
 ---
 
@@ -17,8 +19,8 @@ For each function ask: **is it reusable?**
 **Criteria:**
 
 {{block "gen_criteria_ab" .}}
-- **(a) Cross-module potential** — it does something that could be needed in other modules if we generalize the function signature.
-- **(b) Already generic** — it is already mostly generic; to make it fully generic we just have to add generic or polymorphic parameters.
+- **(a) Cross-module potential** — it does something that could be needed in other modules if the function signature were generalized.
+- **(b) Already generic** — it is already mostly generic; making it fully generic requires only adding generic or polymorphic parameters.
 {{- end}}
 - **(c) Decomposable** — it could be decomposed into smaller generic functions.
 - **(d) Replaceable** — it could be removed entirely if another known function from `specs/ref/LIST.md` is used instead.
@@ -30,7 +32,7 @@ For each function ask: **is it reusable?**
 | **(a), (b), (c)** | Document into `specs/ref/LIST.md` |
 | **(d)** | Add info into `specs/ref/LIST.md` near the corresponding function that could replace it |
 
-**Update `specs/ref/LIST.md` after every file — do NOT batch.**
+**Update `specs/ref/LIST.md` after every file — do not batch**, because batching risks losing findings if the process is interrupted.
 
 ### 4. Build the Spec
 
@@ -62,31 +64,43 @@ After completing all files:
 
 ## Progress Tracking Graph
 
-Track your progress as a graph. Always do **one movement at a time**.
+Track your progress as a graph. Complete one movement at a time.
 
 ```
-[ {pkg1} [x] ] -> [ {pkg2} [✅] ] -> [ {pkg2.1} [🚫] ]
-                                  -> [ {pkg2.2} [🚫] ]
-                -> [ {pkg3} [⌛] ] -> [ {pkg3.1} [ ] ]
+[ {pkg1} [x] ] -> [ {pkg2} [done] ] -> [ {pkg2.1} [skip] ]
+                                     -> [ {pkg2.2} [skip] ]
+               -> [ {pkg3} [next] ] -> [ {pkg3.1} [ ] ]
 ```
 
 **Legend:**
 
 | Symbol | Meaning |
 |--------|---------|
-| ✅ | Done, completed, or checked hypothesis |
-| 🚫 | Canceled |
-| ⌛ | Next / current work |
-| [ ] | Not complete, not checked |
+| done | Completed or checked hypothesis |
+| skip | Canceled |
+| next | Current work |
+| [ ] | Not started |
 
 ---
 
-## Rules
+<self_check>
+
+Before writing SPEC.md, verify:
+
+- Are all findings backed by exact file paths and line numbers?
+- Have you checked for false positives — is each finding genuinely reusable, not just a helper?
+- Does LIST.md cover every source file (excluding tests)?
+
+</self_check>
+
+<rules>
 
 1. **Micro-loops** — update `LIST.md` after every file, not at the end.
-2. **One graph movement at a time** — do not skip ahead.
+2. **One graph movement at a time** — complete the current file before moving on.
 3. **Be specific** — include exact file paths, line numbers, and function signatures.
 {{- block "gen_generics_focus" .}}
 4. **Generics focus** — when criterion (b) applies, note which generic or polymorphic parameters would be needed.
 {{- end}}
-5. **No false positives** — only document genuinely reusable code, not every helper.
+5. **Only genuine reuse** — document genuinely reusable code, not every helper, because false positives waste implementation effort.
+
+</rules>

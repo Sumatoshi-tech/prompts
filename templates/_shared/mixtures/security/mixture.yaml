@@ -1,0 +1,7 @@
+name: security
+description: Security-first thinking and threat-aware development
+use_case: Projects handling sensitive data, authentication, network boundaries, or user input
+targets:
+  - implement
+  - bug
+  - researcher

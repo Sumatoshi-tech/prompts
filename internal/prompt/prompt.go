@@ -5,18 +5,23 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/Sumatoshi-tech/prompts/internal/config"
+	"github.com/Sumatoshi-tech/prompts/internal/mixtures"
 )
 
+const separatorWidth = 60
+
 // RunInitPrompts interactively gathers project configuration from the user.
-func RunInitPrompts(cfg *config.Config, defaultName string) (*config.Config, error) {
-	return gatherConfig(cfg, defaultName, os.Stdin, os.Stdout)
+func RunInitPrompts(cfg *config.Config, defaultName string, tmplFS fs.FS) (*config.Config, error) {
+	return gatherConfig(cfg, defaultName, os.Stdin, os.Stdout, tmplFS)
 }
 
-func gatherConfig(cfg *config.Config, defaultName string, in io.Reader, out io.Writer) (*config.Config, error) {
+func gatherConfig(cfg *config.Config, defaultName string, in io.Reader, out io.Writer, tmplFS fs.FS) (*config.Config, error) {
 	reader := bufio.NewReader(in)
 
 	askFn := func(prompt, defaultVal string) (string, error) {
@@ -152,16 +157,112 @@ func gatherConfig(cfg *config.Config, defaultName string, in io.Reader, out io.W
 
 	cfg.Agents = parseAgents(agentsStr)
 
+	// Mixture selection (optional).
+	if tmplFS != nil {
+		selected, mixErr := promptMixtures(tmplFS, out, askFn)
+		if mixErr != nil {
+			return nil, mixErr
+		}
+
+		cfg.Mixtures = selected
+	}
+
 	if err = cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid config: %w", err)
+	}
+
+	// Offer to prepare project-related skills after init.
+	genSkills, err := askBoolFn("Generate project-related skills after init?", false)
+	if err != nil {
+		return nil, err
+	}
+
+	if genSkills {
+		printSkillGenerationPrompt(out, cfg)
 	}
 
 	return cfg, nil
 }
 
+// printSkillGenerationPrompt outputs a ready-to-use prompt that the user can
+// feed to their selected AI agent to generate project-specific skills.
+func printSkillGenerationPrompt(out io.Writer, cfg *config.Config) {
+	fmt.Fprintln(out, "\n"+strings.Repeat("─", separatorWidth))
+	fmt.Fprintln(out, "Copy the prompt below and run it with your AI agent after init.")
+	fmt.Fprintln(out, "It will generate project-specific skills and document them.")
+	fmt.Fprintln(out, strings.Repeat("─", separatorWidth))
+
+	fmt.Fprintf(out, `
+You are bootstrapping project-specific skills for "%s".
+
+Project context:
+- Name: %s
+- Ecosystem: %s
+- Workflow: %s
+- Description: %s
+- Expertise domain: %s
+- Target agents: %s
+
+Your task:
+1. Read AGENTS.md and all existing skills in .agents/skills/ to understand the current skill set.
+2. Read docs/ and specs/ to understand the project domain.
+3. Based on the project's expertise domain ("%s") and ecosystem ("%s"),
+   identify 2-5 project-specific skills that would accelerate development. Consider:
+   - Domain-specific workflows (e.g., /migrate for database projects, /api for REST services, /protocol for network code)
+   - Testing patterns unique to this domain (e.g., /fuzz for parsers, /bench for performance-critical code)
+   - Integration workflows (e.g., /deploy, /release, /changelog)
+   - Code generation patterns relevant to the ecosystem
+4. For each skill:
+   a. Create .agents/skills/<name>/SKILL.md with frontmatter (name, description) and detailed instructions
+   b. Create the corresponding agent command file:
+`,
+		cfg.ProjectName,
+		cfg.ProjectName,
+		cfg.Ecosystem,
+		cfg.Workflow,
+		cfg.Description,
+		cfg.Expertise,
+		strings.Join(cfg.Agents, ", "),
+		cfg.Expertise,
+		cfg.Ecosystem,
+	)
+
+	for _, agent := range cfg.Agents {
+		switch agent {
+		case "claude":
+			fmt.Fprintf(out, "      - Claude: .claude/commands/<name>.md\n")
+		case "gemini":
+			fmt.Fprintf(out, "      - Gemini: .gemini/commands/<name>.toml\n")
+		case "windsurf":
+			fmt.Fprintf(out, "      - Windsurf: .windsurf/workflows/<name>.md\n")
+		case "cursor":
+			fmt.Fprintf(out, "      - Cursor: .cursor/rules/<name>.mdc\n")
+		}
+	}
+
+	fmt.Fprintf(out, `5. Update AGENTS.md to list the new skills in a "Project Skills" section.
+6. Output a summary of what skills were created and why.
+
+Rules:
+- Each skill must follow the same structure as existing skills (frontmatter + instructions).
+- Skills must be specific to this project's domain, not generic.
+- Do not duplicate functionality already covered by /implement, /roadmap, /perf, /bug, /frd.
+`)
+
+	fmt.Fprintln(out, strings.Repeat("─", separatorWidth))
+}
+
+func parseMixtures(input string) []string {
+	return parseCommaSeparated(input)
+}
+
 func parseAgents(input string) []string {
+	return parseCommaSeparated(input)
+}
+
+func parseCommaSeparated(input string) []string {
 	parts := strings.Split(input, ",")
-	agents := make([]string, 0, len(parts))
+	result := make([]string, 0, len(parts))
 	seen := make(map[string]bool, len(parts))
 
 	for _, part := range parts {
@@ -169,11 +270,53 @@ func parseAgents(input string) []string {
 		if trimmed != "" && !seen[trimmed] {
 			seen[trimmed] = true
 
-			agents = append(agents, trimmed)
+			result = append(result, trimmed)
 		}
 	}
 
-	return agents
+	return result
+}
+
+func promptMixtures(tmplFS fs.FS, out io.Writer, askFn func(string, string) (string, error)) ([]string, error) {
+	allMixtures, err := mixtures.LoadAll(tmplFS)
+	if err != nil {
+		return nil, fmt.Errorf("loading mixtures: %w", err)
+	}
+
+	if len(allMixtures) == 0 {
+		return nil, nil
+	}
+
+	fmt.Fprintln(out, "\nAvailable mixtures (cross-cutting concerns injected into skills):")
+
+	names := make([]string, 0, len(allMixtures))
+	for name := range allMixtures {
+		names = append(names, name)
+	}
+
+	sort.Strings(names)
+
+	for _, name := range names {
+		def := allMixtures[name]
+		fmt.Fprintf(out, "  %-15s %s\n", name, def.Description)
+
+		if def.UseCase != "" {
+			fmt.Fprintf(out, "  %-15s Use-case: %s\n", "", def.UseCase)
+		}
+	}
+
+	fmt.Fprintln(out)
+
+	mixturesStr, err := askFn("Mixtures (comma-separated, or empty to skip)", "")
+	if err != nil {
+		return nil, err
+	}
+
+	if mixturesStr == "" {
+		return nil, nil
+	}
+
+	return parseMixtures(mixturesStr), nil
 }
 
 func ask(reader *bufio.Reader, out io.Writer, prompt, defaultVal string) (string, error) {

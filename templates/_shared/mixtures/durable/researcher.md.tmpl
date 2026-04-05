@@ -1,0 +1,30 @@
+When researching features, evaluate through the durable execution lens:
+
+### Durability Research Questions
+
+For every feature proposal, assess:
+
+1. **Does this feature involve multi-step operations?** If yes, the spec must address failure recovery at each step.
+2. **Can this operation be interrupted and resumed?** If not, redesign until it can.
+3. **What side effects does this feature produce?** Each must be trackable and idempotent.
+4. **How long can this operation run?** Anything beyond seconds needs durable timers, heartbeats, and checkpoints.
+5. **What happens during a deployment while this is running?** Version compatibility is required.
+
+### Spec Durability Section
+
+Include a dedicated durability section in the SPEC.md:
+
+- **State model:** What states does the workflow transition through? Draw the state machine.
+- **Persistence strategy:** Where and how is progress stored? What is the recovery point?
+- **Idempotency strategy:** How is each step made safe to retry? What keys or tokens are used?
+- **Side-effect tracking:** How are external actions (API calls, writes, notifications) recorded to prevent duplicates?
+- **Failure taxonomy:** Which failures are transient (retry) vs permanent (escalate)? What are the retry policies?
+- **Rehydration design:** How does the system reconstruct a running workflow from storage after a crash?
+- **Observability:** What logs, metrics, and dashboards expose workflow health?
+
+### Market Research Angle
+
+When studying how competitors solve the same problem:
+- Do they use durable execution frameworks (Temporal, Step Functions, Durable Functions)?
+- How do they handle partial failures in user-visible workflows?
+- What is their recovery time objective (RTO) for interrupted operations?

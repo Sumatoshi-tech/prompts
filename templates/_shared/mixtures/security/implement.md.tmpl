@@ -1,0 +1,21 @@
+Apply security-first thinking to every implementation step:
+
+### Threat Model Checklist
+Before writing code, identify:
+- **Trust boundaries:** Where does untrusted input enter? (user input, external APIs, config files, env vars)
+- **Data sensitivity:** What data flows through this code? (credentials, PII, tokens, secrets)
+- **Attack surface:** What new endpoints, parsers, or file operations does this introduce?
+
+### Secure Coding Rules
+- Validate and sanitize ALL external input at system boundaries. Never trust input from users, files, or network.
+- Use parameterized queries / structured APIs — never interpolate strings into commands, queries, or paths.
+- Apply principle of least privilege — request only the permissions needed, scope access narrowly.
+- Handle errors without leaking internal details (stack traces, file paths, config) to external callers.
+- Use constant-time comparison for secrets and tokens.
+- Set timeouts on all external calls — network, file I/O, subprocess execution.
+- Never log secrets, tokens, passwords, or PII. Redact before logging.
+
+### Test Security
+- Write tests for input validation edge cases: empty, oversized, malformed, unicode, null bytes, path traversal.
+- Test authentication/authorization boundaries: ensure unauthorized access is denied.
+- Test error responses: verify no internal details leak in error messages.
