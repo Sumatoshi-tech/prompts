@@ -13,7 +13,7 @@ func TestPlaceForAgents_Claude(t *testing.T) {
 
 	rendered := testRendered()
 
-	files, err := adapters.PlaceForAgents(rendered, []string{config.AgentClaude}, config.WorkflowFRD)
+	files, err := adapters.PlaceForAgents(rendered, []string{config.AgentClaude}, config.WorkflowFRD, nil)
 	if err != nil {
 		t.Fatalf("PlaceForAgents() error: %v", err)
 	}
@@ -40,7 +40,7 @@ func TestPlaceForAgents_SkillMDHasFrontmatter(t *testing.T) {
 
 	rendered := testRendered()
 
-	files, err := adapters.PlaceForAgents(rendered, []string{config.AgentClaude}, config.WorkflowFRD)
+	files, err := adapters.PlaceForAgents(rendered, []string{config.AgentClaude}, config.WorkflowFRD, nil)
 	if err != nil {
 		t.Fatalf("PlaceForAgents() error: %v", err)
 	}
@@ -70,7 +70,7 @@ func TestPlaceForAgents_Codex(t *testing.T) {
 
 	rendered := testRendered()
 
-	files, err := adapters.PlaceForAgents(rendered, []string{config.AgentCodex}, config.WorkflowFRD)
+	files, err := adapters.PlaceForAgents(rendered, []string{config.AgentCodex}, config.WorkflowFRD, nil)
 	if err != nil {
 		t.Fatalf("PlaceForAgents() error: %v", err)
 	}
@@ -87,7 +87,7 @@ func TestPlaceForAgents_Copilot(t *testing.T) {
 
 	rendered := testRendered()
 
-	files, err := adapters.PlaceForAgents(rendered, []string{config.AgentCopilot}, config.WorkflowFRD)
+	files, err := adapters.PlaceForAgents(rendered, []string{config.AgentCopilot}, config.WorkflowFRD, nil)
 	if err != nil {
 		t.Fatalf("PlaceForAgents() error: %v", err)
 	}
@@ -104,7 +104,7 @@ func TestPlaceForAgents_Cursor(t *testing.T) {
 
 	rendered := testRendered()
 
-	files, err := adapters.PlaceForAgents(rendered, []string{config.AgentCursor}, config.WorkflowFRD)
+	files, err := adapters.PlaceForAgents(rendered, []string{config.AgentCursor}, config.WorkflowFRD, nil)
 	if err != nil {
 		t.Fatalf("PlaceForAgents() error: %v", err)
 	}
@@ -135,7 +135,7 @@ func TestPlaceForAgents_Gemini(t *testing.T) {
 
 	rendered := testRendered()
 
-	files, err := adapters.PlaceForAgents(rendered, []string{config.AgentGemini}, config.WorkflowFRD)
+	files, err := adapters.PlaceForAgents(rendered, []string{config.AgentGemini}, config.WorkflowFRD, nil)
 	if err != nil {
 		t.Fatalf("PlaceForAgents() error: %v", err)
 	}
@@ -169,7 +169,7 @@ func TestPlaceForAgents_Windsurf(t *testing.T) {
 
 	rendered := testRendered()
 
-	files, err := adapters.PlaceForAgents(rendered, []string{config.AgentWindsurf}, config.WorkflowFRD)
+	files, err := adapters.PlaceForAgents(rendered, []string{config.AgentWindsurf}, config.WorkflowFRD, nil)
 	if err != nil {
 		t.Fatalf("PlaceForAgents() error: %v", err)
 	}
@@ -189,7 +189,7 @@ func TestPlaceForAgents_MultipleAgents(t *testing.T) {
 
 	agents := []string{config.AgentClaude, config.AgentGemini, config.AgentCursor}
 
-	files, err := adapters.PlaceForAgents(rendered, agents, config.WorkflowFRD)
+	files, err := adapters.PlaceForAgents(rendered, agents, config.WorkflowFRD, nil)
 	if err != nil {
 		t.Fatalf("PlaceForAgents() error: %v", err)
 	}
@@ -215,7 +215,7 @@ func TestPlaceForAgents_UnknownAgent(t *testing.T) {
 
 	rendered := testRendered()
 
-	_, err := adapters.PlaceForAgents(rendered, []string{"unknown"}, config.WorkflowFRD)
+	_, err := adapters.PlaceForAgents(rendered, []string{"unknown"}, config.WorkflowFRD, nil)
 	if err == nil {
 		t.Fatal("expected error for unknown agent, got nil")
 	}
@@ -351,7 +351,7 @@ func TestPlaceForAgents_JourneyWorkflow(t *testing.T) {
 
 	rendered := testRenderedJourney()
 
-	files, err := adapters.PlaceForAgents(rendered, []string{config.AgentClaude}, config.WorkflowJourney)
+	files, err := adapters.PlaceForAgents(rendered, []string{config.AgentClaude}, config.WorkflowJourney, nil)
 	if err != nil {
 		t.Fatalf("PlaceForAgents() error: %v", err)
 	}
@@ -447,7 +447,7 @@ func TestSkillContent_SemanticEquivalence(t *testing.T) {
 	expected := normalize(rawBody)
 
 	for _, agent := range allAgents {
-		files, err := adapters.PlaceForAgents(rendered, []string{agent}, config.WorkflowFRD)
+		files, err := adapters.PlaceForAgents(rendered, []string{agent}, config.WorkflowFRD, nil)
 		if err != nil {
 			t.Fatalf("PlaceForAgents(%s) error: %v", agent, err)
 		}

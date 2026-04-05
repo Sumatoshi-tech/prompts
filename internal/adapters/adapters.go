@@ -3,10 +3,12 @@ package adapters
 
 import (
 	"fmt"
+	"io/fs"
 	"maps"
 	"path/filepath"
 
 	"github.com/Sumatoshi-tech/prompts/internal/config"
+	"github.com/Sumatoshi-tech/prompts/internal/mixtures"
 )
 
 // SkillDef defines a skill extracted from rendered instruction templates.
@@ -39,6 +41,14 @@ var baseSkills = map[string]SkillDef{
 	"instructions/instr-generalize.md": {
 		Name:        "generalize",
 		Description: "Find reusable code and document generalization opportunities",
+	},
+	"instructions/instr-bug.md": {
+		Name:        "bug",
+		Description: "Systematic bug diagnosis and test-driven fix workflow",
+	},
+	"instructions/instr-researcher.md": {
+		Name:        "researcher",
+		Description: "Technical product research and specification workflow",
 	},
 }
 
@@ -89,20 +99,32 @@ func allSkillPaths() map[string]bool {
 	return paths
 }
 
+// MixtureOpts holds parameters for mixture injection during skill extraction.
+// When TemplateFS is nil, mixture injection is skipped.
+type MixtureOpts struct {
+	Active     []string       // Active mixture names from config.
+	TemplateFS fs.FS          // Embedded template filesystem.
+	Ecosystem  string         // Current ecosystem (e.g. "golang").
+	Config     *config.Config // Full config for template rendering.
+}
+
 // PlaceForAgents takes the rendered template output and generates
 // agent-specific file placements for all configured agents.
 // It also removes the raw instructions/ files from the output since
 // they are replaced by agent-specific skill files.
-func PlaceForAgents(rendered map[string][]byte, agents []string, workflow string) ([]PlacedFile, error) {
+func PlaceForAgents(rendered map[string][]byte, agents []string, workflow string, mix *MixtureOpts) ([]PlacedFile, error) {
 	// Extract skill bodies from rendered instructions.
-	extractedSkills := extractSkills(rendered, workflow)
+	extractedSkills, err := extractSkills(rendered, workflow, mix)
+	if err != nil {
+		return nil, fmt.Errorf("extracting skills: %w", err)
+	}
 
 	var placed []PlacedFile
 
 	for _, agent := range agents {
-		files, err := placeForAgent(agent, extractedSkills, rendered)
-		if err != nil {
-			return nil, fmt.Errorf("placing for agent %s: %w", agent, err)
+		files, placeErr := placeForAgent(agent, extractedSkills, rendered)
+		if placeErr != nil {
+			return nil, fmt.Errorf("placing for agent %s: %w", agent, placeErr)
 		}
 
 		placed = append(placed, files...)
@@ -122,10 +144,25 @@ type FileAgent struct {
 // that generate them. Base template files (AGENTS.md, Makefile, etc.)
 // have nil Agents. Files produced by multiple agents are marked IsShared.
 func FileOwnership(rendered map[string][]byte, agents []string, workflow string) (map[string]FileAgent, error) {
-	extractedSkills := extractSkills(rendered, workflow)
+	extractedSkills, err := extractSkills(rendered, workflow, nil)
+	if err != nil {
+		return nil, fmt.Errorf("extracting skills: %w", err)
+	}
+
+	ownership := buildBaseOwnership(rendered)
+
+	if addErr := addAgentOwnership(ownership, agents, extractedSkills, rendered); addErr != nil {
+		return nil, addErr
+	}
+
+	markSharedFiles(ownership)
+
+	return ownership, nil
+}
+
+func buildBaseOwnership(rendered map[string][]byte) map[string]FileAgent {
 	ownership := make(map[string]FileAgent)
 
-	// Base template files (not produced by any agent).
 	instrPaths := make(map[string]bool)
 	for _, p := range RemoveInstructionPaths() {
 		instrPaths[p] = true
@@ -133,17 +170,20 @@ func FileOwnership(rendered map[string][]byte, agents []string, workflow string)
 
 	for path := range rendered {
 		if instrPaths[path] {
-			continue // raw instructions are removed; skip.
+			continue
 		}
 
 		ownership[path] = FileAgent{Path: path}
 	}
 
-	// Agent-specific files.
+	return ownership
+}
+
+func addAgentOwnership(ownership map[string]FileAgent, agents []string, skills []SkillDef, rendered map[string][]byte) error {
 	for _, agent := range agents {
-		files, err := placeForAgent(agent, extractedSkills, rendered)
+		files, err := placeForAgent(agent, skills, rendered)
 		if err != nil {
-			return nil, fmt.Errorf("computing ownership for %s: %w", agent, err)
+			return fmt.Errorf("computing ownership for %s: %w", agent, err)
 		}
 
 		for _, f := range files {
@@ -157,15 +197,16 @@ func FileOwnership(rendered map[string][]byte, agents []string, workflow string)
 		}
 	}
 
-	// Mark shared files.
+	return nil
+}
+
+func markSharedFiles(ownership map[string]FileAgent) {
 	for path, fa := range ownership {
 		if len(fa.Agents) > 1 {
 			fa.IsShared = true
 			ownership[path] = fa
 		}
 	}
-
-	return ownership, nil
 }
 
 // RemoveInstructionPaths returns the set of raw instruction paths that
@@ -182,13 +223,23 @@ func RemoveInstructionPaths() []string {
 	return paths
 }
 
-func extractSkills(rendered map[string][]byte, workflow string) []SkillDef {
+func extractSkills(rendered map[string][]byte, workflow string, mix *MixtureOpts) ([]SkillDef, error) {
 	var result []SkillDef
 
 	for path, def := range skillsForWorkflow(workflow) {
 		body, ok := rendered[path]
 		if !ok {
 			continue
+		}
+
+		// Inject mixture content if configured.
+		if mix != nil && len(mix.Active) > 0 && mix.TemplateFS != nil {
+			injected, err := mixtures.AppendToSkill(body, mix.TemplateFS, mix.Ecosystem, mix.Active, def.Name, mix.Config)
+			if err != nil {
+				return nil, fmt.Errorf("injecting mixtures into %s: %w", def.Name, err)
+			}
+
+			body = injected
 		}
 
 		result = append(result, SkillDef{
@@ -198,7 +249,7 @@ func extractSkills(rendered map[string][]byte, workflow string) []SkillDef {
 		})
 	}
 
-	return result
+	return result, nil
 }
 
 func placeForAgent(agent string, extractedSkills []SkillDef, rendered map[string][]byte) ([]PlacedFile, error) {

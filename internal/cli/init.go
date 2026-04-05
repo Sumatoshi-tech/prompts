@@ -28,6 +28,7 @@ var initFlags struct {
 	cgo            bool
 	docker         bool
 	agents         []string
+	mixtures       []string
 	ecosystem      string
 	workflow       string
 }
@@ -46,6 +47,10 @@ func init() {
 	initCmd.Flags().StringSliceVar(
 		&initFlags.agents, "ai", []string{"claude"},
 		"target AI agents (claude,codex,copilot,cursor,gemini,windsurf)",
+	)
+	initCmd.Flags().StringSliceVar(
+		&initFlags.mixtures, "mixtures", nil,
+		"instruction mixtures (comma-separated, e.g. security,observability)",
 	)
 	initCmd.Flags().StringVar(&initFlags.ecosystem, "ecosystem", "golang", "template ecosystem (golang, rust, zig)")
 	initCmd.Flags().StringVar(&initFlags.workflow, "workflow", "frd", "development workflow (frd, journey)")
@@ -215,7 +220,7 @@ func buildConfig(targetDir string) (*config.Config, error) {
 		return buildConfigFromFlags(cfg, targetDir)
 	}
 
-	return prompt.RunInitPrompts(cfg, filepath.Base(targetDir))
+	return prompt.RunInitPrompts(cfg, filepath.Base(targetDir), promptkit.Templates)
 }
 
 func buildConfigFromFlags(cfg *config.Config, targetDir string) (*config.Config, error) {
@@ -262,6 +267,10 @@ func buildConfigFromFlags(cfg *config.Config, targetDir string) (*config.Config,
 
 	if len(initFlags.agents) > 0 {
 		cfg.Agents = initFlags.agents
+	}
+
+	if len(initFlags.mixtures) > 0 {
+		cfg.Mixtures = initFlags.mixtures
 	}
 
 	if err := cfg.Validate(); err != nil {

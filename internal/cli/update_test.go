@@ -14,6 +14,15 @@ import (
 	"github.com/Sumatoshi-tech/prompts/internal/scaffold"
 )
 
+// writeTestFile writes data to path, failing the test on error.
+func writeTestFile(t *testing.T, path string, data []byte) {
+	t.Helper()
+
+	if err := os.WriteFile(path, data, 0o600); err != nil {
+		t.Fatalf("writing test file %s: %v", path, err)
+	}
+}
+
 // setupProject creates a scaffolded project in a temp dir and returns the dir path.
 func setupProject(t *testing.T, modify func(*config.Config)) string {
 	t.Helper()
@@ -217,7 +226,7 @@ func TestUpdate_InvalidConfigValue(t *testing.T) {
 	configPath := filepath.Join(dir, config.FileName)
 	raw, _ := os.ReadFile(configPath)
 	corrupted := string(raw) // coverage_min: 150 is already invalid (>100); use as-is.
-	os.WriteFile(configPath, []byte(corrupted), 0o600)
+	writeTestFile(t, configPath, []byte(corrupted))
 
 	_, err := runUpdateCapture(t, dir, true, false)
 	if err == nil {
@@ -240,7 +249,7 @@ func TestUpdate_MissingRequiredField(t *testing.T) {
 	raw, _ := os.ReadFile(configPath)
 	// Replace project_name value with empty string.
 	corrupted := strings.Replace(string(raw), "project_name: testproject", "project_name:", 1)
-	os.WriteFile(configPath, []byte(corrupted), 0o600)
+	writeTestFile(t, configPath, []byte(corrupted))
 
 	_, err := runUpdateCapture(t, dir, true, false)
 	if err == nil {

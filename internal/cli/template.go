@@ -131,6 +131,10 @@ func runTemplateAdd(_ *cobra.Command, args []string) error {
 		}
 	}
 
+	if strings.ContainsAny(name, `/\`) || strings.Contains(name, "..") {
+		return fmt.Errorf("invalid template name: %q", name)
+	}
+
 	overrideDir := ".promptkit/templates"
 	destPath := filepath.Join(overrideDir, name+".tmpl")
 
@@ -138,12 +142,12 @@ func runTemplateAdd(_ *cobra.Command, args []string) error {
 		return fmt.Errorf("creating override directory: %w", err)
 	}
 
-	data, err := os.ReadFile(srcFile)
+	srcData, err := os.ReadFile(filepath.Clean(srcFile))
 	if err != nil {
 		return fmt.Errorf("reading source file: %w", err)
 	}
 
-	if err = os.WriteFile(destPath, data, 0o600); err != nil {
+	if err = os.WriteFile(filepath.Join(overrideDir, name+".tmpl"), srcData, 0o600); err != nil {
 		return fmt.Errorf("writing override: %w", err)
 	}
 
@@ -202,7 +206,7 @@ func runTemplateExtract(_ *cobra.Command, args []string) error {
 	}
 
 	overrideDir := ".promptkit/templates"
-	destPath := filepath.Join(overrideDir, name+".tmpl")
+	destPath := filepath.Clean(filepath.Join(overrideDir, name+".tmpl"))
 
 	if !extractFlags.force {
 		if _, err = os.Stat(destPath); err == nil {

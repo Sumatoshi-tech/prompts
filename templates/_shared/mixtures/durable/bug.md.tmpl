@@ -1,0 +1,21 @@
+When diagnosing bugs, apply the durable execution lens:
+
+### Durability Failure Patterns
+
+Many production bugs stem from violated durability assumptions. Check for these patterns:
+
+- **Non-idempotent retry:** A step ran twice and produced duplicates (double-charge, double-send, duplicate record). Fix: add idempotency key or conditional write.
+- **Lost progress:** A crash discarded in-flight work because state was only in memory. Fix: persist before acknowledging.
+- **Zombie side effect:** An external action was performed but not recorded, so it ran again on retry. Fix: record completion before or atomically with the side effect.
+- **Non-deterministic replay:** A workflow replayed differently because it read `time.Now()` or external state during decision logic. Fix: inject deterministic inputs.
+- **State corruption:** A workflow resumed into an invalid state because transitions were implicit. Fix: use explicit state machine with validated transitions.
+- **Timer amnesia:** An in-memory timer was lost on restart, causing a workflow to stall forever. Fix: use durable timers persisted to storage.
+
+### Bug Fix Verification
+
+After fixing a durability bug, verify with these tests:
+
+- [ ] Reproduce the original failure scenario — confirm it no longer occurs
+- [ ] Kill the process mid-operation — confirm recovery on restart
+- [ ] Retry the failed step — confirm idempotent behavior
+- [ ] Check for similar patterns elsewhere in the codebase — fix all instances

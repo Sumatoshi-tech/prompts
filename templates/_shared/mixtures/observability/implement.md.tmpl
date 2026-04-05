@@ -1,0 +1,24 @@
+Apply observability-first thinking to every implementation:
+
+### Structured Logging
+- Use structured logging (key-value pairs), not unstructured string messages.
+- Include trace/request IDs in all log entries for correlation.
+- Log at appropriate levels: ERROR for failures, WARN for degraded state, INFO for business events, DEBUG for development.
+- Never log sensitive data (passwords, tokens, PII). Redact before logging.
+- Log at boundaries: incoming requests, outgoing calls, state transitions, error paths.
+
+### Metrics
+- Add counters for operations: success, failure, retries.
+- Add histograms for latencies: processing time, external call duration.
+- Add gauges for resource state: queue depth, active connections, cache size.
+- Name metrics consistently: `{component}_{operation}_{unit}` (e.g., `parser_files_processed_total`).
+
+### Error Context
+- Wrap errors with context at each layer: what was being done, with what input.
+- Include actionable information: not just "failed" but "failed to parse config: invalid YAML at line 42".
+- Preserve error chains for root cause analysis.
+
+### Health and Debugging
+- Expose health check endpoints or status commands for operational monitoring.
+- Make internal state inspectable: configuration, feature flags, connection status.
+- Ensure all operations are traceable from input to output.

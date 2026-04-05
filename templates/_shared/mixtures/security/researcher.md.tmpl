@@ -1,0 +1,14 @@
+When researching features, include security considerations:
+
+### Security Research
+- Research known vulnerabilities in comparable products/libraries for this feature category.
+- Identify OWASP Top 10 risks relevant to the proposed feature.
+- Check if the feature requires new trust boundaries or privilege escalation.
+
+### Spec Security Section
+Include a dedicated security section in the SPEC.md:
+- Threat model: what attacks are possible?
+- Trust boundaries: where is validation needed?
+- Data classification: what sensitivity level does this feature handle?
+- Authentication/authorization: who should access this feature?
+- Audit trail: what security-relevant events should be logged?

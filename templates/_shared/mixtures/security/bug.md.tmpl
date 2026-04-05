@@ -1,0 +1,13 @@
+When diagnosing and fixing bugs, apply security lens:
+
+### Security Impact Assessment
+Before fixing, assess:
+- Could this bug be exploited? (injection, bypass, data leak, DoS)
+- Does the fix introduce new attack surface?
+- Are there similar patterns elsewhere in the codebase that have the same vulnerability?
+
+### Secure Fix Rules
+- If the bug involves input handling, add validation tests for malicious inputs.
+- If the bug involves error paths, verify no sensitive data leaks in error messages.
+- If the fix changes trust boundaries, update threat model documentation.
+- Search for similar vulnerable patterns across the codebase — fix them all, not just the reported instance.

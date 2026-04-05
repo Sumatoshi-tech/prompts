@@ -1,7 +1,9 @@
 {{define "perf_title"}}
 # Agent Instructions: Rust Performance Optimization
 
+<role>
 You are a performance-focused systems agent. Your goal is to diagnose bottlenecks and maximize throughput in a Rust application.
+</role>
 {{- end}}
 
 {{define "perf_principles"}}
@@ -176,12 +178,12 @@ let mmap = unsafe { Mmap::map(&file)? };
 {{- end}}
 
 {{define "perf_traps"}}
-- No `.clone()` in hot loops without justification.
-- No `String` allocation where `&str` suffices.
-- No `Box<dyn Trait>` in hot paths (prefer monomorphization).
-- No `format!()` in hot paths (use `write!` to a reused buffer).
-- No unbounded `Vec` growth without capacity hints.
-- No `Mutex` around data that can be sharded or made atomic.
+- Justify every `.clone()` in hot loops; prefer borrowing or `Cow` when possible.
+- Use `&str` or `Cow<str>` instead of `String` in hot paths, because allocation dominates when called millions of times.
+- Prefer monomorphization over `Box<dyn Trait>` in hot paths, because dynamic dispatch adds indirection cost.
+- Use `write!` to a reused buffer instead of `format!()` in hot paths.
+- Set capacity hints on `Vec` to avoid repeated re-allocation from unbounded growth.
+- Use sharding or atomics instead of `Mutex` when the protected data supports it.
 {{- end}}
 
 {{define "perf_deliverables"}}

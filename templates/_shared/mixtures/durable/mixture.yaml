@@ -1,0 +1,7 @@
+name: durable
+description: Durable execution patterns for failure-resilient workflows
+use_case: Distributed systems, long-running processes, workflows that must survive failures and restarts
+targets:
+  - implement
+  - researcher
+  - bug

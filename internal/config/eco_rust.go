@@ -131,8 +131,12 @@ func init() {
 
 		FieldEntries: []FieldEntry{
 			{
-				Key:         "rust_edition",
-				Files:       []string{"AGENTS.md", "rustfmt.toml", ".agents/instructions/instr-implement.md", ".agents/instructions/instr-roadmaper.md"},
+				Key: "rust_edition",
+				Files: []string{
+					"AGENTS.md", "rustfmt.toml",
+					".agents/instructions/instr-implement.md",
+					".agents/instructions/instr-roadmaper.md",
+				},
 				Description: "Rust edition for code generation",
 			},
 			{

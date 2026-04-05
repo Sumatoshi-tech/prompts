@@ -2,7 +2,10 @@ package config
 
 import "github.com/spf13/cobra"
 
-const defaultGoVersion = "1.22"
+const (
+	defaultGoVersion     = "1.22"
+	defaultGoAnalysisCmd = "go vet ./..."
+)
 
 var golangFlags struct {
 	goVersion string
@@ -13,7 +16,7 @@ func init() {
 		Name:               EcosystemGolang,
 		Description:        "Go — modules, go vet, golangci-lint, go test",
 		RequiredFields:     []string{"module_path", "go_version"},
-		DefaultAnalysisCmd: "go vet ./...",
+		DefaultAnalysisCmd: defaultGoAnalysisCmd,
 
 		DefaultCmdPath: func(binaryName string) string {
 			return "./cmd/" + binaryName
@@ -24,7 +27,7 @@ func init() {
 				cfg.GoVersion = defaultGoVersion
 			}
 
-			cfg.AnalysisCmd = "go vet ./..."
+			cfg.AnalysisCmd = defaultGoAnalysisCmd
 		},
 
 		Validate: nil,
